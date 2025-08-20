@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D&D Party Dice Roller</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap');
+        
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            background: radial-gradient(ellipse at center, #2c1810 0%, #1a0f08 100%);
+            font-family: 'Cinzel', serif;
+            color: #d4af37;
+            overflow-x: hidden;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            font-weight: 700;
+            color: #ffd700;
+            margin-bottom: 1rem;
+        }
+
+        .connection-section {
+            background: rgba(139, 69, 19, 0.3);
+            border: 2px solid #d4af37;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 2rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+
+        .tab {
+            background: linear-gradient(145deg, #8b4513, #654321);
+            border: 2px solid #d4af37;
+            border-radius: 10px;
+            padding: 10px 20px;
+            font-family: 'Cinzel', serif;
+            font-weight: 600;
+            color: #ffd700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            background: linear-gradient(145deg, #d4af37, #b8860b);
+            border-color: #ffd700;
+            color: #2c1810;
+        }
+
+        .tab-content {
+            display: none;
+            text-align: center;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .setup-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        .form-input {
+            background: linear-gradient(145deg, #8b4513, #654321);
+            border: 2px solid #d4af37;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-family: 'Cinzel', serif;
+            font-weight: 600;
+            color: #ffd700;
+            text-align: center;
+            font-size: 1rem;
+            min-width: 120px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #ffd700;
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+        }
+
+        .avatar-selector {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .avatar-option {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 3px solid #d4af37;
+            background: linear-gradient(145deg, #8b4513, #a0522d);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .avatar-option:hover, .avatar-option.selected {
+            border-color: #ffd700;
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
+            transform: scale(1.1);
+        }
+
+        .room-code {
+            background: linear-gradient(145deg, #654321, #2c1810);
+            border: 2px solid #ffd700;
+            border-radius: 10px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ffd700;
+            text-align: center;
+            margin: 15px 0;
+            user-select: all;
+        }
+
+        .action-button {
+            background: linear-gradient(145deg, #d4af37, #b8860b);
+            border: 3px solid #ffd700;
+            border-radius: 12px;
+            padding: 12px 25px;
+            font-size: 1rem;
+            font-family: 'Cinzel', serif;
+            font-weight: 600;
+            color: #2c1810;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 5px;
+        }
+
+        .action-button:hover {
+            background: linear-gradient(145deg, #ffd700, #d4af37);
+            transform: translateY(-2px);
+        }
+
+        .action-button:disabled {
+            background: #666;
+            border-color: #888;
+            color: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .status.connected {
+            background: rgba(0, 255, 0, 0.2);
+            border: 1px solid #00ff00;
+            color: #00ff00;
+        }
+
+        .status.disconnected {
+            background: rgba(255, 0, 0, 0.2);
+            border: 1px solid #ff0000;
+            color: #ff0000;
+        }
+
+        .status.connecting {
+            background: rgba(255, 255, 0, 0.2);
+            border: 1px solid #ffff00;
+            color: #ffff00;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .dice-section {
+            background: rgba(139, 69, 19, 0.2);
+            border: 2px solid #d4af37;
+            border-radius: 15px;
+            padding: 20px;
+        }
+
+        .dice-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+
+        .dice-option {
+            background: linear-gradient(145deg, #8b4513, #654321);
+            border: 2px solid #d4af37;
+            border-radius: 10px;
+            padding: 10px 15px;
+            font-family: 'Cinzel', serif;
+            font-weight: 600;
+            color: #ffd700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            min-width: 60px;
+        }
+
+        .dice-option:hover {
+            background: linear-gradient(145deg, #a0522d, #8b4513);
+            border-color: #ffd700;
+            transform: translateY(-2px);
+        }
+
+        .dice-option.active {
+            background: linear-gradient(145deg, #d4af37, #b8860b);
+            border-color: #ffd700;
+            color: #2c1810;
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
+        }
+
+        .dice-container {
+            text-align: center;
+            margin: 2rem 0;
+        }
+
+        .dice-visual {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(145deg, #8b4513, #a0522d);
+            border: 3px solid #ffd700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #ffd700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            margin: 0 auto 20px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .d2 { border-radius: 50%; }
+        .d4 { 
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+            width: 80px;
+            height: 80px;
+            font-size: 1.3rem;
+        }
+        .d6 { border-radius: 12px; }
+        .d8 { 
+            clip-path: polygon(50% 0%, 0% 50%, 50% 100%, 100% 50%);
+            transform: rotate(45deg);
+            font-size: 1.3rem;
+        }
+        .d8 .dice-number { transform: rotate(-45deg); }
+        .d10 { 
+            clip-path: polygon(50% 0%, 100% 25%, 82% 100%, 18% 100%, 0% 25%);
+            font-size: 1.3rem;
+        }
+        .d12 { 
+            clip-path: polygon(50% 0%, 100% 25%, 82% 100%, 18% 100%, 0% 25%);
+            font-size: 1.3rem;
+        }
+        .d20 { 
+            border-radius: 16px;
+            background: linear-gradient(145deg, #8b4513, #a0522d, #654321);
+        }
+        .d100 { 
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .dice-visual.rolling {
+            animation: spin 2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        @keyframes spin {
+            0% { transform: rotateY(0deg) rotateX(0deg) scale(1); }
+            25% { transform: rotateY(180deg) rotateX(90deg) scale(1.1); }
+            50% { transform: rotateY(360deg) rotateX(180deg) scale(1); }
+            75% { transform: rotateY(540deg) rotateX(270deg) scale(1.1); }
+            100% { transform: rotateY(720deg) rotateX(360deg) scale(1); }
+        }
+
+        .result-display {
+            font-size: 2rem;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            margin: 1rem 0;
+            min-height: 3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .result-display.critical-success {
+            color: #00ff00;
+            text-shadow: 0 0 20px #00ff00;
+            animation: glow 1s ease-in-out infinite alternate;
+        }
+
+        .result-display.critical-fail {
+            color: #ff0000;
+            text-shadow: 0 0 20px #ff0000;
+            animation: glow 1s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { text-shadow: 0 0 20px currentColor; }
+            to { text-shadow: 0 0 30px currentColor, 0 0 40px currentColor; }
+        }
+
+        .roll-button {
+            background: linear-gradient(145deg, #d4af37, #b8860b);
+            border: 3px solid #ffd700;
+            border-radius: 12px;
+            padding: 12px 25px;
+            font-size: 1.1rem;
+            font-family: 'Cinzel', serif;
+            font-weight: 600;
+            color: #2c1810;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            width: 100%;
+        }
+
+        .roll-button:hover {
+            background: linear-gradient(145deg, #ffd700, #d4af37);
+            transform: translateY(-2px);
+        }
+
+        .roll-button:disabled {
+            background: #666;
+            border-color: #888;
+            color: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .party-feed {
+            background: rgba(139, 69, 19, 0.2);
+            border: 2px solid #d4af37;
+            border-radius: 15px;
+            padding: 20px;
+            height: 70vh;
+            overflow-y: auto;
+        }
+
+        .feed-header {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #ffd700;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #d4af37;
+        }
+
+        .connected-players {
+            background: rgba(139, 69, 19, 0.3);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .player-list {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .connected-player {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(139, 69, 19, 0.4);
+            border: 1px solid #d4af37;
+            border-radius: 20px;
+            padding: 5px 10px;
+            font-size: 0.9rem;
+        }
+
+        .roll-entry {
+            background: rgba(139, 69, 19, 0.4);
+            border: 1px solid #d4af37;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            animation: slideIn 0.5s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .roll-entry.critical {
+            border-color: #00ff00;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+        }
+
+        .roll-entry.fumble {
+            border-color: #ff0000;
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.3);
+        }
+
+        @keyframes slideIn {
+            from { 
+                opacity: 0;
+                transform: translateX(100px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .player-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #8b4513, #a0522d);
+            border: 2px solid #d4af37;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .roll-info {
+            flex-grow: 1;
+        }
+
+        .player-name {
+            font-weight: 700;
+            color: #ffd700;
+            font-size: 1rem;
+            margin-bottom: 3px;
+        }
+
+        .roll-details {
+            color: #d4af37;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .roll-result {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #ffd700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            flex-shrink: 0;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .roll-result.critical {
+            color: #00ff00;
+            text-shadow: 0 0 15px #00ff00;
+        }
+
+        .roll-result.fumble {
+            color: #ff0000;
+            text-shadow: 0 0 15px #ff0000;
+        }
+
+        .timestamp {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            font-size: 0.7rem;
+            color: #d4af37;
+            opacity: 0.6;
+        }
+
+        .instructions {
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid #ffd700;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            font-size: 0.9rem;
+        }
+
+        .background-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.05;
+            background-image: 
+                radial-gradient(circle at 25% 25%, #ffd700 2px, transparent 2px),
+                radial-gradient(circle at 75% 75%, #ffd700 1px, transparent 1px);
+            background-size: 100px 100px;
+            z-index: -1;
+        }
+
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .party-feed {
+                height: 50vh;
+            }
+        }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 2rem; }
+            .setup-form { flex-direction: column; }
+            .avatar-selector { justify-content: center; }
+            .dice-selector { gap: 5px; }
+            .roll-entry { flex-direction: column; text-align: center; }
+            .tabs { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="background-pattern"></div>
+    
+    <div class="header">
+        <h1>⚔️ D&D Party Dice Roller ⚔️</h1>
+    </div>
+
+    <div class="connection-section">
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('host')">🏰 Host Room</button>
+            <button class="tab" onclick="switchTab('join')">⚔️ Join Room</button>
+        </div>
+
+        <div id="hostTab" class="tab-content active">
+            <h3>Host a New Campaign</h3>
+            <div class="setup-form">
+                <div class="form-group">
+                    <label>Your Name</label>
+                    <input type="text" id="hostName" class="form-input" placeholder="DM Name" value="Dungeon Master">
+                </div>
+                <div class="form-group">
+                    <label>Choose Avatar</label>
+                    <div class="avatar-selector">
+                        <div class="avatar-option selected" data-avatar="🧙‍♂️">🧙‍♂️</div>
+                        <div class="avatar-option" data-avatar="👑">👑</div>
+                        <div class="avatar-option" data-avatar="🐉">🐉</div>
+                        <div class="avatar-option" data-avatar="📜">📜</div>
+                        <div class="avatar-option" data-avatar="⚔️">⚔️</div>
+                        <div class="avatar-option" data-avatar="🛡️">🛡️</div>
+                        <div class="avatar-option" data-avatar="🏹">🏹</div>
+                        <div class="avatar-option" data-avatar="🔮">🔮</div>
+                    </div>
+                </div>
+            </div>
+            <button class="action-button" onclick="createRoom()">🏰 Create Campaign Room</button>
+            
+            <div id="roomInfo" style="display: none;">
+                <div class="instructions">
+                    <strong>🎯 Share this room code with your players:</strong>
+                </div>
+                <div class="room-code" id="roomCode">XXXX-XXXX</div>
+                <button class="action-button" onclick="copyRoomCode()">📋 Copy Room Code</button>
+                <button class="action-button" onclick="shareRoomLink()">🔗 Share Link</button>
+            </div>
+        </div>
+
+        <div id="joinTab" class="tab-content">
+            <h3>Join Campaign</h3>
+            <div class="setup-form">
+                <div class="form-group">
+                    <label>Your Name</label>
+                    <input type="text" id="playerName" class="form-input" placeholder="Character Name" value="">
+                </div>
+                <div class="form-group">
+                    <label>Room Code</label>
+                    <input type="text" id="roomCodeInput" class="form-input" placeholder="XXXX-XXXX" maxlength="9" style="text-transform: uppercase;">
+                </div>
+                <div class="form-group">
+                    <label>Choose Avatar</label>
+                    <div class="avatar-selector" id="playerAvatars">
+                        <div class="avatar-option selected" data-avatar="⚔️">⚔️</div>
+                        <div class="avatar-option" data-avatar="🏹">🏹</div>
+                        <div class="avatar-option" data-avatar="🛡️">🛡️</div>
+                        <div class="avatar-option" data-avatar="🔥">🔥</div>
+                        <div class="avatar-option" data-avatar="❄️">❄️</div>
+                        <div class="avatar-option" data-avatar="⚡">⚡</div>
+                        <div class="avatar-option" data-avatar="🌟">🌟</div>
+                        <div class="avatar-option" data-avatar="🦄">🦄</div>
+                    </div>
+                </div>
+            </div>
+            <button class="action-button" onclick="joinRoom()">⚔️ Join Campaign</button>
+        </div>
+
+        <div id="connectionStatus" class="status" style="display: none;"></div>
+    </div>
+
+    <div class="main-content" id="gameArea" style="display: none;">
+        <div class="dice-section">
+            <div class="dice-selector">
+                <button class="dice-option" data-sides="2">D2</button>
+                <button class="dice-option active" data-sides="4">D4</button>
+                <button class="dice-option" data-sides="6">D6</button>
+                <button class="dice-option" data-sides="8">D8</button>
+                <button class="dice-option" data-sides="10">D10</button>
+                <button class="dice-option" data-sides="12">D12</button>
+                <button class="dice-option" data-sides="20">D20</button>
+                <button class="dice-option" data-sides="100">D100</button>
+            </div>
+
+            <div class="dice-container">
+                <div class="dice-visual d4" id="dice">
+                    <span class="dice-number" id="diceNumber">?</span>
+                </div>
+                <div class="result-display" id="result">Ready to roll!</div>
+                <button class="roll-button" id="rollButton" onclick="rollDice()">
+                    🎲 Roll D4 🎲
+                </button>
+            </div>
+        </div>
+
+        <div class="party-feed">
+            <div class="feed-header">
+                🎯 Party Roll Feed 🎯
+            </div>
+            <div class="connected-players">
+                <div><strong>Connected Players:</strong></div>
+                <div class="player-list" id="playerList">
+                    <div class="connected-player">
+                        <span>🎲</span>
+                        <span>Waiting for players...</span>
+                    </div>
+                </div>
+            </div>
+            <div id="rollFeed">
+                <div class="roll-entry">
+                    <div class="player-avatar">🎲</div>
+                    <div class="roll-info">
+                        <div class="player-name">Welcome!</div>
+                        <div class="roll-details">Start rolling to see everyone's results</div>
+                    </div>
+                    <div class="timestamp">Now</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // PeerJS for WebRTC peer-to-peer connections
+        let peer = null;
+        let connections = {};
+        let isHost = false;
+        let currentRoom = '';
+        let playerName = '';
+        let playerAvatar = '🧙‍♂️';
+        let currentDice = 4;
+        let connectedPlayers = {};
+
+        const diceInfo = {
+            2: { class: 'd2' },
+            4: { class: 'd4' },
+            6: { class: 'd6' },
+            8: { class: 'd8' },
+            10: { class: 'd10' },
+            12: { class: 'd12' },
+            20: { class: 'd20' },
+            100: { class: 'd100' }
+        };
+
+        // Initialize PeerJS (using free public server)
+        function initializePeer() {
+            return new Promise((resolve, reject) => {
+                // Using public PeerJS server (free)
+                peer = new Peer({
+                    host: 'peerjs-server.herokuapp.com',
+                    secure: true,
+                    port: 443,
+                    path: '/',
+                    debug: 2
+                });
+
+                peer.on('open', (id) => {
+                    console.log('Peer connected with ID:', id);
+                    resolve(id);
+                });
+
+                peer.on('error', (error) => {
+                    console.error('Peer error:', error);
+                    // Fallback to different server or local
+                    peer = new Peer();
+                    peer.on('open', resolve);
+                    peer.on('error', reject);
+                });
+
+                peer.on('connection', (conn) => {
+                    handleIncomingConnection(conn);
+                });
+            });
+        }
+
+        // Generate room code
+        function generateRoomCode() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let result = '';
+            for (let i = 0; i < 8; i++) {
+                if (i === 4) result += '-';
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        // Tab switching
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            
+            document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
+            document.getElementById(tab + 'Tab').classList.add('active');
+        }
+
+        // Avatar selection
+        function setupAvatarSelection() {
+            document.querySelectorAll('.avatar-selector').forEach(selector => {
+                selector.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('avatar-option')) {
+                        selector.querySelectorAll('.avatar-option').forEach(o => o.classList.remove('selected'));
+                        e.target.classList.add('selected');
+                        playerAvatar = e.target.dataset.avatar;
+                    }
+                });
+            });
+        }
+
+        // Create room (Host)
+        async function createRoom() {
+            try {
+                updateStatus('Creating room...', 'connecting');
+                
+                playerName = document.getElementById('hostName').value || 'Dungeon Master';
+                isHost = true;
+                
+                await initializePeer();
+                
+                currentRoom = generateRoomCode();
+                document.getElementById('roomCode').textContent = currentRoom;
+                document.getElementById('roomInfo').style.display = 'block';
+                
+                // Store room mapping
+                if (typeof(Storage) !== "undefined") {
+                    localStorage.setItem('dnd-room-' + currentRoom, peer.id);
+                }
+                
+                connectedPlayers[peer.id] = { name: playerName, avatar: playerAvatar };
+                updatePlayerList();
+                
+                updateStatus('Room created! Share the code with players.', 'connected');
+                showGameArea();
+                
+            } catch (error) {
+                console.error('Error creating room:', error);
+                updateStatus('Failed to create room. Please try again.', 'disconnected');
+            }
+        }
+
+        // Join room (Player)
+        async function joinRoom() {
+            try {
+                const roomCode = document.getElementById('roomCodeInput').value.toUpperCase().trim();
+                const name = document.getElementById('playerName').value.trim();
+                
+                if (!roomCode || !name) {
+                    alert('Please enter both room code and your name!');
+                    return;
+                }
+                
+                updateStatus('Joining room...', 'connecting');
+                
+                playerName = name;
+                currentRoom = roomCode;
+                isHost = false;
+                
+                await initializePeer();
+                
+                // Try to get host ID from localStorage (same browser sessions)
+                let hostId = null;
+                if (typeof(Storage) !== "undefined") {
+                    hostId = localStorage.getItem('dnd-room-' + roomCode);
+                }
+                
+                if (!hostId) {
+                    // If no stored host ID, try a predictable pattern
+                    hostId = 'dnd-' + roomCode.replace('-', '').toLowerCase();
+                }
+                
+                // Connect to host
+                const conn = peer.connect(hostId);
+                
+                conn.on('open', () => {
+                    connections[hostId] = conn;
+                    conn.send({
+                        type: 'join',
+                        player: { name: playerName, avatar: playerAvatar, id: peer.id }
+                    });
+                    updateStatus('Connected to campaign!', 'connected');
+                    showGameArea();
+                });
+                
+                conn.on('error', () => {
+                    updateStatus('Failed to connect. Check room code.', 'disconnected');
+                });
+                
+                conn.on('data', (data) => {
+                    handleMessage(data, hostId);
+                });
+                
+            } catch (error) {
+                console.error('Error joining room:', error);
+                updateStatus('Failed to join room. Please try again.', 'disconnected');
+            }
+        }
+
+        // Handle incoming connections (Host only)
+        function handleIncomingConnection(conn) {
+            if (!isHost) return;
+            
+            conn.on('open', () => {
+                connections[conn.peer] = conn;
+            });
+            
+            conn.on('data', (data) => {
+                handleMessage(data, conn.peer);
+            });
+            
+            conn.on('close', () => {
+                delete connections[conn.peer];
+                delete connectedPlayers[conn.peer];
+                updatePlayerList();
+                broadcastToAll({
+                    type: 'playerLeft',
+                    playerId: conn.peer
+                });
+            });
+        }
+
+        // Handle incoming messages
+        function handleMessage(data, senderId) {
+            switch (data.type) {
+                case 'join':
+                    if (isHost) {
+                        connectedPlayers[senderId] = data.player;
+                        updatePlayerList();
+                        
+                        // Send current player list to new player
+                        connections[senderId].send({
+                            type: 'playerList',
+                            players: connectedPlayers
+                        });
+                        
+                        // Broadcast new player to others
+                        broadcastToAll({
+                            type: 'newPlayer',
+                            player: data.player
+                        }, senderId);
+                        
+                        addToFeed('System', '📢', 0, `${data.player.name} joined the campaign!`, 'system');
+                    }
+                    break;
+                    
+                case 'playerList':
+                    connectedPlayers = data.players;
+                    updatePlayerList();
+                    break;
+                    
+                case 'newPlayer':
+                    connectedPlayers[data.player.id] = data.player;
+                    updatePlayerList();
+                    addToFeed('System', '📢', 0, `${data.player.name} joined the campaign!`, 'system');
+                    break;
+                    
+                case 'playerLeft':
+                    delete connectedPlayers[data.playerId];
+                    updatePlayerList();
+                    break;
+                    
+                case 'roll':
+                    addToFeed(data.player.name, data.player.avatar, data.diceType, data.result, data.rollType);
+                    break;
+            }
+        }
+
+        // Broadcast message to all connected players
+        function broadcastToAll(message, excludeId = null) {
+            Object.keys(connections).forEach(peerId => {
+                if (peerId !== excludeId && connections[peerId]) {
+                    try {
+                        connections[peerId].send(message);
+                    } catch (error) {
+                        console.error('Error sending to', peerId, error);
+                    }
+                }
+            });
+        }
+
+        // Update connection status
+        function updateStatus(message, type) {
+            const status = document.getElementById('connectionStatus');
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+        }
+
+        // Show game area
+        function showGameArea() {
+            document.getElementById('gameArea').style.display = 'grid';
+            selectDice(4);
+        }
+
+        // Update connected players list
+        function updatePlayerList() {
+            const playerList = document.getElementById('playerList');
+            playerList.innerHTML = '';
+            
+            Object.values(connectedPlayers).forEach(player => {
+                const playerDiv = document.createElement('div');
+                playerDiv.className = 'connected-player';
+                playerDiv.innerHTML = `<span>${player.avatar}</span><span>${player.name}</span>`;
+                playerList.appendChild(playerDiv);
+            });
+        }
+
+        // Copy room code to clipboard
+        function copyRoomCode() {
+            const roomCode = document.getElementById('roomCode').textContent;
+            navigator.clipboard.writeText(roomCode).then(() => {
+                alert('Room code copied to clipboard!');
+            });
+        }
+
+        // Share room link
+        function shareRoomLink() {
+            const roomCode = document.getElementById('roomCode').textContent;
+            const url = window.location.href.split('?')[0] + '?room=' + roomCode;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Join D&D Campaign',
+                    text: `Join our D&D campaign! Room code: ${roomCode}`,
+                    url: url
+                });
+            } else {
+                navigator.clipboard.writeText(url).then(() => {
+                    alert('Campaign link copied to clipboard!');
+                });
+            }
+        }
+
+        // Check URL for room code
+        function checkUrlForRoom() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const roomCode = urlParams.get('room');
+            if (roomCode) {
+                switchTab('join');
+                document.getElementById('roomCodeInput').value = roomCode;
+            }
+        }
+
+        // Cryptographically secure random generation
+        function getSecureRandom() {
+            const array = new Uint32Array(1);
+            crypto.getRandomValues(array);
+            return array[0] / (0xFFFFFFFF + 1);
+        }
+
+        function rollDie(sides) {
+            return Math.floor(getSecureRandom() * sides) + 1;
+        }
+
+        // Dice selection
+        function selectDice(sides) {
+            currentDice = sides;
+            
+            document.querySelectorAll('.dice-option').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-sides="${sides}"]`).classList.add('active');
+            
+            const dice = document.getElementById('dice');
+            const info = diceInfo[sides];
+            dice.className = `dice-visual ${info.class}`;
+            
+            document.getElementById('rollButton').textContent = `🎲 Roll D${sides} 🎲`;
+            document.getElementById('diceNumber').textContent = '?';
+            document.getElementById('result').textContent = 'Ready to roll!';
+            document.getElementById('result').className = 'result-display';
+        }
+
+        // Roll dice
+        function rollDice() {
+            const button = document.getElementById('rollButton');
+            const dice = document.getElementById('dice');
+            const diceNumber = document.getElementById('diceNumber');
+            const result = document.getElementById('result');
+            
+            button.disabled = true;
+            button.textContent = '🎲 Rolling... 🎲';
+            
+            dice.classList.add('rolling');
+            diceNumber.textContent = '?';
+            result.textContent = 'Rolling...';
+            result.className = 'result-display';
+            
+            setTimeout(() => {
+                const roll = rollDie(currentDice);
+                
+                diceNumber.textContent = roll;
+                result.textContent = roll;
+                
+                // Check for critical rolls
+                let rollType = 'normal';
+                if (currentDice === 20 && roll === 20) {
+                    result.classList.add('critical-success');
+                    result.textContent = `🌟 ${roll} 🌟 CRITICAL!`;
+                    rollType = 'critical';
+                } else if (currentDice === 20 && roll === 1) {
+                    result.classList.add('critical-fail');
+                    result.textContent = `💀 ${roll} 💀 FUMBLE!`;
+                    rollType = 'fumble';
+                } else if (roll === currentDice) {
+                    result.classList.add('critical-success');
+                    rollType = 'critical';
+                } else if (roll === 1 && currentDice > 2) {
+                    result.classList.add('critical-fail');
+                    rollType = 'fumble';
+                }
+                
+                // Add to local feed
+                addToFeed(playerName, playerAvatar, currentDice, roll, rollType);
+                
+                // Broadcast to other players
+                broadcastToAll({
+                    type: 'roll',
+                    player: { name: playerName, avatar: playerAvatar },
+                    diceType: currentDice,
+                    result: roll,
+                    rollType: rollType
+                });
+                
+                dice.classList.remove('rolling');
+                button.disabled = false;
+                button.textContent = `🎲 Roll D${currentDice} 🎲`;
+            }, 2000);
+        }
+
+        // Add roll to feed
+        function addToFeed(playerName, avatar, diceType, roll, rollType = 'normal') {
+            const feed = document.getElementById('rollFeed');
+            const entry = document.createElement('div');
+            
+            let rollText = roll;
+            if (rollType === 'system') {
+                rollText = '';
+            }
+            
+            entry.className = `roll-entry ${rollType}`;
+            entry.innerHTML = `
+                <div class="player-avatar">${avatar}</div>
+                <div class="roll-info">
+                    <div class="player-name">${playerName}</div>
+                    <div class="roll-details">${rollType === 'system' ? roll : `Rolled D${diceType}`}</div>
+                </div>
+                ${rollText ? `<div class="roll-result ${rollType}">${rollText}</div>` : ''}
+                <div class="timestamp">${new Date().toLocaleTimeString()}</div>
+            `;
+            
+            // Insert at the beginning
+            if (feed.children.length > 0) {
+                feed.insertBefore(entry, feed.children[0]);
+            } else {
+                feed.appendChild(entry);
+            }
+            
+            // Keep only last 50 entries
+            while (feed.children.length > 50) {
+                feed.removeChild(feed.lastChild);
+            }
+            
+            // Scroll to top
+            feed.scrollTop = 0;
+        }
+
+        // Dice selection event listeners
+        document.querySelectorAll('.dice-option').forEach(button => {
+            button.addEventListener('click', () => {
+                const sides = parseInt(button.dataset.sides);
+                selectDice(sides);
+            });
+        });
+
+        // Keyboard support
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'Enter') {
+                e.preventDefault();
+                const rollButton = document.getElementById('rollButton');
+                if (rollButton && !rollButton.disabled && rollButton.offsetParent !== null) {
+                    rollDice();
+                }
+            }
+        });
+
+        // Auto-format room code input
+        document.getElementById('roomCodeInput').addEventListener('input', (e) => {
+            let value = e.target.value.replace(/[^A-Z0-9]/g, '').toUpperCase();
+            if (value.length > 4) {
+                value = value.slice(0, 4) + '-' + value.slice(4, 8);
+            }
+            e.target.value = value;
+        });
+
+        // Initialize
+        setupAvatarSelection();
+        checkUrlForRoom();
+        selectDice(4);
+
+        // Load PeerJS library
+        if (!window.Peer) {
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js';
+            script.onload = () => {
+                console.log('PeerJS loaded successfully');
+            };
+            script.onerror = () => {
+                console.error('Failed to load PeerJS');
+                updateStatus('Failed to load networking library. Please refresh.', 'disconnected');
+            };
+            document.head.appendChild(script);
+        }
+    </script>
+</body>
+</html>
