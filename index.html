@@ -713,7 +713,6 @@
         </div>
     </div>
 
-    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script>
         let peer = null;
         let connections = {};
@@ -734,35 +733,52 @@
             100: { class: 'd100' }
         };
 
+        // Check if PeerJS is loaded
+        function checkPeerJS() {
+            return typeof Peer !== 'undefined';
+        }
+
+        // Load PeerJS if not already loaded
+        function loadPeerJS() {
+            return new Promise((resolve, reject) => {
+                if (checkPeerJS()) {
+                    resolve();
+                    return;
+                }
+
+                const script = document.createElement('script');
+                script.src = 'https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js';
+                script.onload = () => {
+                    console.log('PeerJS loaded successfully');
+                    resolve();
+                };
+                script.onerror = () => {
+                    console.error('Failed to load PeerJS');
+                    reject(new Error('Failed to load PeerJS'));
+                };
+                document.head.appendChild(script);
+            });
+        }
+
         // Initialize PeerJS with multiple server options
         function initializePeer() {
-            return new Promise((resolve, reject) => {
-                // Try multiple PeerJS servers
-                const servers = [
-                    { host: '0.peerjs.com', port: 443, path: '/', secure: true },
-                    { /* Use default PeerJS cloud server */ }
-                ];
+            return new Promise(async (resolve, reject) => {
+                try {
+                    // Ensure PeerJS is loaded
+                    await loadPeerJS();
 
-                let serverIndex = 0;
+                    // Try the default PeerJS cloud server first (most reliable)
+                    console.log('Initializing PeerJS with default server...');
 
-                function tryNextServer() {
-                    if (serverIndex >= servers.length) {
-                        reject(new Error('All PeerJS servers failed'));
-                        return;
-                    }
-
-                    const config = servers[serverIndex];
-                    console.log('Trying PeerJS server:', config);
-
-                    peer = new Peer(config);
+                    peer = new Peer();
 
                     const timeout = setTimeout(() => {
+                        console.log('PeerJS connection timeout');
                         if (peer && !peer.disconnected) {
                             peer.destroy();
                         }
-                        serverIndex++;
-                        tryNextServer();
-                    }, 10000); // 10 second timeout
+                        reject(new Error('Connection timeout'));
+                    }, 15000); // 15 second timeout
 
                     peer.on('open', (id) => {
                         clearTimeout(timeout);
@@ -773,20 +789,21 @@
                     peer.on('error', (error) => {
                         console.error('Peer error:', error);
                         clearTimeout(timeout);
-                        if (error.type === 'server-error' || error.type === 'socket-error') {
-                            serverIndex++;
-                            tryNextServer();
-                        } else {
-                            reject(error);
-                        }
+                        reject(error);
                     });
 
                     peer.on('connection', (conn) => {
                         handleIncomingConnection(conn);
                     });
-                }
 
-                tryNextServer();
+                    peer.on('disconnected', () => {
+                        console.log('Peer disconnected');
+                    });
+
+                } catch (error) {
+                    console.error('Error initializing peer:', error);
+                    reject(error);
+                }
             });
         }
 
@@ -815,10 +832,16 @@
         // Create room (Host)
         async function createRoom() {
             try {
-                updateStatus('Creating room...', 'connecting');
+                updateStatus('Loading networking...', 'connecting');
+                
+                // Disable button to prevent double clicks
+                const createButton = event.target;
+                createButton.disabled = true;
                 
                 playerName = document.getElementById('hostName').value || 'Dungeon Master';
                 isHost = true;
+                
+                updateStatus('Connecting to server...', 'connecting');
                 
                 const peerId = await initializePeer();
                 
@@ -831,9 +854,16 @@
                 updateStatus('Room created! Share your Host ID with players.', 'connected');
                 showGameArea();
                 
+                createButton.disabled = false;
+                
             } catch (error) {
                 console.error('Error creating room:', error);
-                updateStatus('Failed to create room. Please try again.', 'disconnected');
+                updateStatus(`Failed to create room: ${error.message}`, 'disconnected');
+                
+                // Re-enable button
+                if (event && event.target) {
+                    event.target.disabled = false;
+                }
             }
         }
 
