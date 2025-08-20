@@ -825,4 +825,415 @@
                 document.getElementById('hostId').textContent = peerId;
                 document.getElementById('roomInfo').style.display = 'block';
                 
-                connecte
+                connectedPlayers[peerId] = { name: playerName, avatar: playerAvatar };
+                updatePlayerList();
+                
+                updateStatus('Room created! Share your Host ID with players.', 'connected');
+                showGameArea();
+                
+            } catch (error) {
+                console.error('Error creating room:', error);
+                updateStatus('Failed to create room. Please try again.', 'disconnected');
+            }
+        }
+
+        // Join room (Player)
+        async function joinRoom() {
+            try {
+                const hostId = document.getElementById('hostIdInput').value.trim();
+                const name = document.getElementById('playerName').value.trim();
+                
+                if (!hostId || !name) {
+                    alert('Please enter both Host ID and your name!');
+                    return;
+                }
+                
+                updateStatus('Joining room...', 'connecting');
+                
+                playerName = name;
+                isHost = false;
+                
+                await initializePeer();
+                
+                // Connect to host
+                const conn = peer.connect(hostId);
+                
+                conn.on('open', () => {
+                    connections[hostId] = conn;
+                    conn.send({
+                        type: 'join',
+                        player: { name: playerName, avatar: playerAvatar, id: peer.id }
+                    });
+                    updateStatus('Connected to campaign!', 'connected');
+                    showGameArea();
+                });
+                
+                conn.on('error', (error) => {
+                    console.error('Connection error:', error);
+                    updateStatus('Failed to connect. Check Host ID.', 'disconnected');
+                });
+                
+                conn.on('close', () => {
+                    updateStatus('Disconnected from host', 'disconnected');
+                });
+                
+                conn.on('data', (data) => {
+                    handleMessage(data, hostId);
+                });
+                
+                // Timeout for connection
+                setTimeout(() => {
+                    if (!conn.open) {
+                        updateStatus('Connection timeout. Check Host ID.', 'disconnected');
+                    }
+                }, 15000);
+                
+            } catch (error) {
+                console.error('Error joining room:', error);
+                updateStatus('Failed to join room. Please try again.', 'disconnected');
+            }
+        }
+
+        // Handle incoming connections (Host only)
+        function handleIncomingConnection(conn) {
+            if (!isHost) return;
+            
+            console.log('New player connecting:', conn.peer);
+            
+            conn.on('open', () => {
+                connections[conn.peer] = conn;
+                console.log('Player connected:', conn.peer);
+            });
+            
+            conn.on('data', (data) => {
+                handleMessage(data, conn.peer);
+            });
+            
+            conn.on('close', () => {
+                console.log('Player disconnected:', conn.peer);
+                delete connections[conn.peer];
+                if (connectedPlayers[conn.peer]) {
+                    const playerName = connectedPlayers[conn.peer].name;
+                    delete connectedPlayers[conn.peer];
+                    updatePlayerList();
+                    addToFeed('System', '📢', 0, `${playerName} left the campaign`, 'system');
+                    broadcastToAll({
+                        type: 'playerLeft',
+                        playerId: conn.peer
+                    });
+                }
+            });
+
+            conn.on('error', (error) => {
+                console.error('Connection error with', conn.peer, error);
+            });
+        }
+
+        // Handle incoming messages
+        function handleMessage(data, senderId) {
+            console.log('Received message:', data.type, 'from:', senderId);
+            
+            switch (data.type) {
+                case 'join':
+                    if (isHost) {
+                        connectedPlayers[senderId] = data.player;
+                        updatePlayerList();
+                        
+                        // Send current player list to new player
+                        if (connections[senderId]) {
+                            connections[senderId].send({
+                                type: 'playerList',
+                                players: connectedPlayers
+                            });
+                        }
+                        
+                        // Broadcast new player to others
+                        broadcastToAll({
+                            type: 'newPlayer',
+                            player: data.player
+                        }, senderId);
+                        
+                        addToFeed('System', '📢', 0, `${data.player.name} joined the campaign!`, 'system');
+                    }
+                    break;
+                    
+                case 'playerList':
+                    connectedPlayers = data.players;
+                    updatePlayerList();
+                    break;
+                    
+                case 'newPlayer':
+                    connectedPlayers[data.player.id] = data.player;
+                    updatePlayerList();
+                    addToFeed('System', '📢', 0, `${data.player.name} joined the campaign!`, 'system');
+                    break;
+                    
+                case 'playerLeft':
+                    if (connectedPlayers[data.playerId]) {
+                        const playerName = connectedPlayers[data.playerId].name;
+                        delete connectedPlayers[data.playerId];
+                        updatePlayerList();
+                        addToFeed('System', '📢', 0, `${playerName} left the campaign`, 'system');
+                    }
+                    break;
+                    
+                case 'roll':
+                    addToFeed(data.player.name, data.player.avatar, data.diceType, data.result, data.rollType);
+                    break;
+            }
+        }
+
+        // Broadcast message to all connected players
+        function broadcastToAll(message, excludeId = null) {
+            Object.keys(connections).forEach(peerId => {
+                if (peerId !== excludeId && connections[peerId] && connections[peerId].open) {
+                    try {
+                        connections[peerId].send(message);
+                    } catch (error) {
+                        console.error('Error sending to', peerId, error);
+                    }
+                }
+            });
+        }
+
+        // Update connection status
+        function updateStatus(message, type) {
+            const status = document.getElementById('connectionStatus');
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+        }
+
+        // Show game area
+        function showGameArea() {
+            document.getElementById('gameArea').style.display = 'grid';
+            selectDice(4);
+        }
+
+        // Update connected players list
+        function updatePlayerList() {
+            const playerList = document.getElementById('playerList');
+            playerList.innerHTML = '';
+            
+            if (Object.keys(connectedPlayers).length === 0) {
+                const emptyDiv = document.createElement('div');
+                emptyDiv.className = 'connected-player';
+                emptyDiv.innerHTML = `<span>🎲</span><span>Waiting for players...</span>`;
+                playerList.appendChild(emptyDiv);
+                return;
+            }
+            
+            Object.values(connectedPlayers).forEach(player => {
+                const playerDiv = document.createElement('div');
+                playerDiv.className = 'connected-player';
+                playerDiv.innerHTML = `<span>${player.avatar}</span><span>${player.name}</span>`;
+                playerList.appendChild(playerDiv);
+            });
+        }
+
+        // Copy host ID to clipboard
+        function copyHostId() {
+            const hostId = document.getElementById('hostId').textContent;
+            navigator.clipboard.writeText(hostId).then(() => {
+                alert('Host ID copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = hostId;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('Host ID copied to clipboard!');
+            });
+        }
+
+        // Share room link
+        function shareRoomLink() {
+            const hostId = document.getElementById('hostId').textContent;
+            const url = window.location.href.split('?')[0] + '?host=' + encodeURIComponent(hostId);
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Join D&D Campaign',
+                    text: `Join our D&D campaign! Host ID: ${hostId}`,
+                    url: url
+                });
+            } else {
+                navigator.clipboard.writeText(url).then(() => {
+                    alert('Campaign link copied to clipboard!');
+                }).catch(err => {
+                    console.error('Failed to copy: ', err);
+                    alert(`Share this link: ${url}`);
+                });
+            }
+        }
+
+        // Check URL for host ID
+        function checkUrlForHost() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const hostId = urlParams.get('host');
+            if (hostId) {
+                switchTab('join');
+                document.getElementById('hostIdInput').value = hostId;
+            }
+        }
+
+        // Cryptographically secure random generation
+        function getSecureRandom() {
+            const array = new Uint32Array(1);
+            crypto.getRandomValues(array);
+            return array[0] / (0xFFFFFFFF + 1);
+        }
+
+        function rollDie(sides) {
+            return Math.floor(getSecureRandom() * sides) + 1;
+        }
+
+        // Dice selection
+        function selectDice(sides) {
+            currentDice = sides;
+            
+            document.querySelectorAll('.dice-option').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-sides="${sides}"]`).classList.add('active');
+            
+            const dice = document.getElementById('dice');
+            const info = diceInfo[sides];
+            dice.className = `dice-visual ${info.class}`;
+            
+            document.getElementById('rollButton').textContent = `🎲 Roll D${sides} 🎲`;
+            document.getElementById('diceNumber').textContent = '?';
+            document.getElementById('result').textContent = 'Ready to roll!';
+            document.getElementById('result').className = 'result-display';
+        }
+
+        // Roll dice
+        function rollDice() {
+            const button = document.getElementById('rollButton');
+            const dice = document.getElementById('dice');
+            const diceNumber = document.getElementById('diceNumber');
+            const result = document.getElementById('result');
+            
+            button.disabled = true;
+            button.textContent = '🎲 Rolling... 🎲';
+            
+            dice.classList.add('rolling');
+            diceNumber.textContent = '?';
+            result.textContent = 'Rolling...';
+            result.className = 'result-display';
+            
+            setTimeout(() => {
+                const roll = rollDie(currentDice);
+                
+                diceNumber.textContent = roll;
+                result.textContent = roll;
+                
+                // Check for critical rolls
+                let rollType = 'normal';
+                if (currentDice === 20 && roll === 20) {
+                    result.classList.add('critical-success');
+                    result.textContent = `🌟 ${roll} 🌟 CRITICAL!`;
+                    rollType = 'critical';
+                } else if (currentDice === 20 && roll === 1) {
+                    result.classList.add('critical-fail');
+                    result.textContent = `💀 ${roll} 💀 FUMBLE!`;
+                    rollType = 'fumble';
+                } else if (roll === currentDice) {
+                    result.classList.add('critical-success');
+                    rollType = 'critical';
+                } else if (roll === 1 && currentDice > 2) {
+                    result.classList.add('critical-fail');
+                    rollType = 'fumble';
+                }
+                
+                // Add to local feed
+                addToFeed(playerName, playerAvatar, currentDice, roll, rollType);
+                
+                // Broadcast to other players
+                broadcastToAll({
+                    type: 'roll',
+                    player: { name: playerName, avatar: playerAvatar },
+                    diceType: currentDice,
+                    result: roll,
+                    rollType: rollType
+                });
+                
+                dice.classList.remove('rolling');
+                button.disabled = false;
+                button.textContent = `🎲 Roll D${currentDice} 🎲`;
+            }, 2000);
+        }
+
+        // Add roll to feed
+        function addToFeed(playerName, avatar, diceType, roll, rollType = 'normal') {
+            const feed = document.getElementById('rollFeed');
+            const entry = document.createElement('div');
+            
+            let rollText = roll;
+            if (rollType === 'system') {
+                rollText = '';
+            }
+            
+            entry.className = `roll-entry ${rollType}`;
+            entry.innerHTML = `
+                <div class="player-avatar">${avatar}</div>
+                <div class="roll-info">
+                    <div class="player-name">${playerName}</div>
+                    <div class="roll-details">${rollType === 'system' ? roll : `Rolled D${diceType}`}</div>
+                </div>
+                ${rollText ? `<div class="roll-result ${rollType}">${rollText}</div>` : ''}
+                <div class="timestamp">${new Date().toLocaleTimeString()}</div>
+            `;
+            
+            // Insert at the beginning
+            if (feed.children.length > 0) {
+                feed.insertBefore(entry, feed.children[0]);
+            } else {
+                feed.appendChild(entry);
+            }
+            
+            // Keep only last 50 entries
+            while (feed.children.length > 50) {
+                feed.removeChild(feed.lastChild);
+            }
+            
+            // Scroll to top to show newest rolls
+            feed.scrollTop = 0;
+        }
+
+        // Dice selection event listeners
+        document.querySelectorAll('.dice-option').forEach(button => {
+            button.addEventListener('click', () => {
+                const sides = parseInt(button.dataset.sides);
+                selectDice(sides);
+            });
+        });
+
+        // Keyboard support
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'Enter') {
+                e.preventDefault();
+                const rollButton = document.getElementById('rollButton');
+                if (rollButton && !rollButton.disabled && rollButton.offsetParent !== null) {
+                    rollDice();
+                }
+            }
+        });
+
+        // Initialize
+        setupAvatarSelection();
+        checkUrlForHost();
+        selectDice(4);
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            if (peer && !peer.destroyed) {
+                peer.destroy();
+            }
+        });
+    </script>
+</body>
+</html>
