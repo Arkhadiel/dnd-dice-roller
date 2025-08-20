@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -907,6 +908,7 @@
                 </div>
             </div>
             <button class="action-button" onclick="hostRoom()">🏰 Start Hosting</button>
+            <button class="action-button" onclick="startOfflineMode()" style="background: linear-gradient(145deg, #8b4513, #654321); border-color: #d4af37;">🎲 Play Solo/Offline Mode</button>
             <div id="hostStatus" class="status disconnected" style="display: none;">Ready to accept connections</div>
             <div id="hostPeerId" class="peer-id" style="display: none;"></div>
             <div class="instructions">
@@ -1046,37 +1048,308 @@
         
         // Multiple PeerJS server configurations as fallbacks
         const peerConfigs = [
-            { debug: 2 }, // Default PeerJS cloud
-            { host: '0.peerjs.com', port: 443, secure: true, debug: 2 }, // Alternative 1
-            { host: 'peerjs-server.herokuapp.com', port: 443, secure: true, debug: 2 }, // Alternative 2
+            { debug: 1 }, // Default PeerJS cloud server
+            { host: 'peerjs-server.onrender.com', port: 443, secure: true, debug: 1 }, // Alternative 1
+            { config: { 'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }] }, debug: 1 }, // Direct STUN
         ];
         
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
             initializeAvatarSelectors();
             initializeDiceSelector();
-            
-            // Add offline mode option
-            addOfflineModeOption();
+            updateDiceVisual();
         });
 
-        // Add offline mode option
-        function addOfflineModeOption() {
-            const hostTab = document.getElementById('hostTab');
-            const offlineButton = document.createElement('button');
-            offlineButton.className = 'action-button';
-            offlineButton.style.backgroundColor = '#8b4513';
-            offlineButton.style.borderColor = '#d4af37';
-            offlineButton.innerHTML = '🎲 Play Solo/Offline Mode';
-            offlineButton.onclick = function() {
-                startOfflineMode();
-            };
+        // Test basic connectivity before trying PeerJS
+        async function testConnectivity() {
+            try {
+                // Test basic internet connectivity
+                await fetch('https://httpbin.org/get', { 
+                    method: 'GET', 
+                    mode: 'no-cors',
+                    cache: 'no-cache'
+                });
+                return true;
+            } catch (error) {
+                return false;
+            }
+        }
+
+        // Try connecting with different server configurations
+        async function tryConnectWithFallback(isHosting = true, targetId = null) {
+            const statusDiv = isHosting ? document.getElementById('hostStatus') : document.getElementById('joinStatus');
             
-            // Insert before instructions
-            const instructions = hostTab.querySelector('.instructions');
-            hostTab.insertBefore(offlineButton, instructions);
+            // Test connectivity first
+            statusDiv.className = 'status connecting';
+            statusDiv.textContent = '🔍 Testing internet connection...';
+            
+            const hasInternet = await testConnectivity();
+            if (!hasInternet) {
+                statusDiv.className = 'status disconnected';
+                statusDiv.innerHTML = `
+                    <div>❌ No internet connection</div>
+                    <div style="font-size: 0.9em; margin-top: 8px;">
+                        Please check your connection or use offline mode
+                    </div>
+                `;
+                return false;
+            }
+            
+            for (let i = 0; i < peerConfigs.length; i++) {
+                try {
+                    statusDiv.className = 'status connecting';
+                    statusDiv.textContent = `🔄 Connecting... (attempt ${i + 1}/${peerConfigs.length})`;
+                    
+                    const success = await attemptConnection(peerConfigs[i], isHosting, targetId);
+                    if (success) {
+                        currentPeerConfig = i;
+                        return true;
+                    }
+                } catch (error) {
+                    console.log(`Server attempt ${i + 1} failed:`, error.message);
+                    
+                    // Show more specific error on last attempt
+                    if (i === peerConfigs.length - 1) {
+                        statusDiv.className = 'status disconnected';
+                        statusDiv.innerHTML = `
+                            <div>❌ Connection failed</div>
+                            <div style="font-size: 0.9em; margin-top: 8px;">
+                                ${isHosting ? 
+                                    'Try refreshing and hosting again, or use offline mode below' : 
+                                    'Check Room ID and make sure host is online'
+                                }
+                            </div>
+                        `;
+                    }
+                    
+                    // Wait a bit between attempts
+                    if (i < peerConfigs.length - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }
+            }
+            
+            return false;
         }
         
+        // Attempt connection with specific config
+        function attemptConnection(config, isHosting, targetId) {
+            return new Promise((resolve, reject) => {
+                let testPeer;
+                let timeout;
+                
+                try {
+                    // Generate a simple ID for hosting
+                    if (isHosting) {
+                        const roomId = generateRoomId();
+                        testPeer = new Peer(roomId, config);
+                    } else {
+                        testPeer = new Peer(config);
+                    }
+                    
+                    testPeer.on('open', function(id) {
+                        clearTimeout(timeout);
+                        console.log('PeerJS connected with ID:', id);
+                        
+                        if (isHosting) {
+                            // Success for hosting
+                            peer = testPeer;
+                            setupHostEvents(id);
+                            resolve(true);
+                        } else {
+                            // Try to connect to target for joining
+                            const conn = testPeer.connect(targetId);
+                            
+                            const connTimeout = setTimeout(() => {
+                                conn.close();
+                                testPeer.destroy();
+                                reject(new Error('Connection timeout'));
+                            }, 8000);
+                            
+                            conn.on('open', function() {
+                                clearTimeout(connTimeout);
+                                peer = testPeer;
+                                setupJoinEvents(conn, targetId);
+                                resolve(true);
+                            });
+                            
+                            conn.on('error', function(err) {
+                                clearTimeout(connTimeout);
+                                console.log('Connection error:', err);
+                                testPeer.destroy();
+                                reject(new Error('Connection to host failed: ' + err));
+                            });
+                        }
+                    });
+                    
+                    testPeer.on('error', function(err) {
+                        clearTimeout(timeout);
+                        console.log('Peer error:', err);
+                        if (testPeer && !testPeer.destroyed) {
+                            testPeer.destroy();
+                        }
+                        reject(err);
+                    });
+                    
+                    testPeer.on('disconnected', function() {
+                        console.log('Peer disconnected');
+                        if (!peer || peer !== testPeer) {
+                            reject(new Error('Disconnected during setup'));
+                        }
+                    });
+                    
+                    // 8 second timeout per attempt
+                    timeout = setTimeout(() => {
+                        console.log('Connection timeout');
+                        if (testPeer && !testPeer.destroyed) {
+                            testPeer.destroy();
+                        }
+                        reject(new Error('Connection timeout'));
+                    }, 8000);
+                    
+                } catch (error) {
+                    clearTimeout(timeout);
+                    console.log('Error creating peer:', error);
+                    reject(error);
+                }
+            });
+        }
+        
+        // Setup host events after successful connection
+        function setupHostEvents(peerId) {
+            const statusDiv = document.getElementById('hostStatus');
+            const peerIdDiv = document.getElementById('hostPeerId');
+            
+            statusDiv.className = 'status connected';
+            statusDiv.textContent = '🟢 Room Created Successfully!';
+            
+            peerIdDiv.style.display = 'block';
+            peerIdDiv.innerHTML = `<strong>Room ID:</strong> ${peerId}<br><small>Share this ID with your players!</small>`;
+            
+            // Show room ID in game area too
+            document.getElementById('currentRoomId').style.display = 'block';
+            document.getElementById('roomIdDisplay').textContent = peerId;
+            
+            // Show DM controls
+            document.getElementById('dmButton').style.display = 'flex';
+            
+            // Add host to player list
+            connectedPlayers.set('host', { name: playerName, avatar: playerAvatar, isHost: true });
+            
+            // Listen for incoming connections
+            peer.on('connection', function(conn) {
+                console.log('New player connecting:', conn.peer);
+                connections[conn.peer] = conn;
+                
+                conn.on('data', function(data) {
+                    handleIncomingMessage(data, conn.peer);
+                });
+                
+                conn.on('close', function() {
+                    console.log('Player disconnected:', conn.peer);
+                    if (connectedPlayers.has(conn.peer)) {
+                        const playerInfo = connectedPlayers.get(conn.peer);
+                        connectedPlayers.delete(conn.peer);
+                        updatePlayerList();
+                        addSystemMessage(`⚡ ${playerInfo.name} has left the party.`);
+                    }
+                    delete connections[conn.peer];
+                });
+                
+                conn.on('error', function(err) {
+                    console.log('Connection error with player:', conn.peer, err);
+                });
+            });
+            
+            peer.on('error', function(err) {
+                console.log('Host peer error:', err);
+                statusDiv.className = 'status disconnected';
+                statusDiv.textContent = '❌ Connection lost: ' + err.message;
+            });
+            
+            // Switch to game area
+            switchToGameArea();
+            updatePlayerList();
+            addSystemMessage(`🏰 ${playerName} has created a new adventure room!`);
+        }
+        
+        // Setup join events after successful connection
+        function setupJoinEvents(connection, hostId) {
+            const statusDiv = document.getElementById('joinStatus');
+            
+            statusDiv.className = 'status connected';
+            statusDiv.textContent = '🟢 Connected to Adventure!';
+            
+            // Store host connection
+            connections['host'] = connection;
+            
+            // Send join message to host
+            connection.send({
+                type: 'player_join',
+                data: {
+                    name: playerName,
+                    avatar: playerAvatar
+                }
+            });
+            
+            connection.on('data', function(data) {
+                handleIncomingMessage(data, 'host');
+            });
+            
+            connection.on('close', function() {
+                console.log('Disconnected from host');
+                statusDiv.className = 'status disconnected';
+                statusDiv.textContent = '❌ Disconnected from adventure';
+                // Could show reconnection options here
+            });
+            
+            connection.on('error', function(err) {
+                console.log('Connection error:', err);
+                statusDiv.className = 'status disconnected';
+                statusDiv.textContent = '❌ Connection error: ' + err.message;
+            });
+            
+            // Show room ID in game area
+            document.getElementById('currentRoomId').style.display = 'block';
+            document.getElementById('roomIdDisplay').textContent = hostId;
+            
+            // Switch to game area
+            switchToGameArea();
+            addSystemMessage(`⚔️ ${playerName} has joined the adventure!`);
+        }
+
+        // Generate a simple room ID
+        function generateRoomId() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let result = '';
+            for (let i = 0; i < 6; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        // Switch to game area
+        function switchToGameArea() {
+            document.getElementById('connectionArea').style.display = 'none';
+            document.getElementById('gameArea').style.display = 'grid';
+        }
+
+        // Update player list
+        function updatePlayerList() {
+            const playerList = document.getElementById('playerList');
+            playerList.innerHTML = '';
+            
+            connectedPlayers.forEach((playerInfo, playerId) => {
+                const playerElement = document.createElement('div');
+                playerElement.className = 'connected-player';
+                playerElement.innerHTML = `
+                    <span style="font-size: 1.4rem;">${playerInfo.avatar}</span>
+                    <span>${playerInfo.name}${playerInfo.isHost ? ' (DM)' : ''}</span>
+                `;
+                playerList.appendChild(playerElement);
+            });
+        }
+
         // Start offline mode (single player)
         function startOfflineMode() {
             const nameInput = document.getElementById('hostName');
@@ -1111,79 +1384,6 @@
             addSystemMessage(`💡 This mode works without internet - perfect for testing!`);
         }
 
-        // Try connecting with different server configurations
-        async function tryConnectWithFallback(isHosting = true, targetId = null) {
-            const statusDiv = isHosting ? document.getElementById('hostStatus') : document.getElementById('joinStatus');
-            
-            for (let i = currentPeerConfig; i < peerConfigs.length; i++) {
-                try {
-                    statusDiv.textContent = `Trying server ${i + 1}/${peerConfigs.length}...`;
-                    
-                    const success = await attemptConnection(peerConfigs[i], isHosting, targetId);
-                    if (success) {
-                        currentPeerConfig = i;
-                        return true;
-                    }
-                } catch (error) {
-                    console.log(`Server ${i + 1} failed:`, error);
-                    continue;
-                }
-            }
-            
-            // All servers failed
-            statusDiv.className = 'status disconnected';
-            statusDiv.innerHTML = `
-                <div>❌ All servers failed. Try:</div>
-                <div>🔄 Refresh page and retry</div>
-                <div>🎲 Or use "Play Solo/Offline Mode" below</div>
-            `;
-            return false;
-        }
-        
-        // Attempt connection with specific config
-        function attemptConnection(config, isHosting, targetId) {
-            return new Promise((resolve, reject) => {
-                const testPeer = new Peer(config);
-                let timeout;
-                
-                testPeer.on('open', function(id) {
-                    clearTimeout(timeout);
-                    
-                    if (isHosting) {
-                        // Success for hosting
-                        peer = testPeer;
-                        setupHostEvents(id);
-                        resolve(true);
-                    } else {
-                        // Try to connect to target for joining
-                        const conn = testPeer.connect(targetId);
-                        
-                        conn.on('open', function() {
-                            peer = testPeer;
-                            setupJoinEvents(conn, targetId);
-                            resolve(true);
-                        });
-                        
-                        conn.on('error', function() {
-                            testPeer.destroy();
-                            reject(new Error('Connection to host failed'));
-                        });
-                    }
-                });
-                
-                testPeer.on('error', function(err) {
-                    clearTimeout(timeout);
-                    testPeer.destroy();
-                    reject(err);
-                });
-                
-                // 10 second timeout per attempt
-                timeout = setTimeout(() => {
-                    testPeer.destroy();
-                    reject(new Error('Timeout'));
-                }, 10000);
-            });
-        }
         function initializeAvatarSelectors() {
             document.querySelectorAll('.avatar-selector').forEach(selector => {
                 selector.querySelectorAll('.avatar-option').forEach(option => {
@@ -1446,33 +1646,6 @@
             });
         }
 
-        // Generate a random room ID
-        function generateRoomId() {
-            return Math.random().toString(36).substr(2, 8).toUpperCase();
-        }
-
-        // Switch to game area
-        function switchToGameArea() {
-            document.getElementById('connectionArea').style.display = 'none';
-            document.getElementById('gameArea').style.display = 'grid';
-        }
-
-        // Update player list
-        function updatePlayerList() {
-            const playerList = document.getElementById('playerList');
-            playerList.innerHTML = '';
-            
-            connectedPlayers.forEach((playerInfo, playerId) => {
-                const playerElement = document.createElement('div');
-                playerElement.className = 'connected-player';
-                playerElement.innerHTML = `
-                    <span style="font-size: 1.4rem;">${playerInfo.avatar}</span>
-                    <span>${playerInfo.name}${playerInfo.isHost ? ' (DM)' : ''}</span>
-                `;
-                playerList.appendChild(playerElement);
-            });
-        }
-
         // Roll dice functionality
         function rollDice() {
             const diceCount = parseInt(document.getElementById('diceCount').value) || 1;
@@ -1679,9 +1852,6 @@
                 dmDropdown.classList.remove('show');
             }
         });
-
-        // Initialize dice visual on load
-        updateDiceVisual();
     </script>
 </body>
 </html>
