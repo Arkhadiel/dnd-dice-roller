@@ -242,12 +242,184 @@
             padding: 20px;
         }
 
+        .dice-controls {
+            margin-bottom: 2rem;
+        }
+
         .dice-selector {
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
             justify-content: center;
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .multi-dice-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding: 15px;
+            background: rgba(139, 69, 19, 0.3);
+            border-radius: 10px;
+        }
+
+        .multi-dice-input {
+            background: linear-gradient(145deg, #8b4513, #654321);
+            border: 2px solid #d4af37;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-family: 'Cinzel', serif;
+            font-weight: 600;
+            color: #ffd700;
+            text-align: center;
+            font-size: 1rem;
+            width: 60px;
+        }
+
+        .multi-dice-input:focus {
+            outline: none;
+            border-color: #ffd700;
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+        }
+
+        .group-roll-section {
+            background: rgba(139, 69, 19, 0.3);
+            border: 2px solid #d4af37;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .group-roll-button {
+            background: linear-gradient(145deg, #8b4513, #654321);
+            border: 2px solid #d4af37;
+            border-radius: 10px;
+            padding: 10px 20px;
+            font-family: 'Cinzel', serif;
+            font-weight: 600;
+            color: #ffd700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .group-roll-button:hover {
+            background: linear-gradient(145deg, #a0522d, #8b4513);
+            border-color: #ffd700;
+        }
+
+        .group-roll-button.active {
+            background: linear-gradient(145deg, #d4af37, #b8860b);
+            border-color: #ffd700;
+            color: #2c1810;
+        }
+
+        .initiative-tracker {
+            background: rgba(139, 69, 19, 0.2);
+            border: 2px solid #d4af37;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 1rem;
+        }
+
+        .initiative-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .initiative-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #ffd700;
+        }
+
+        .initiative-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .initiative-entry {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(139, 69, 19, 0.4);
+            border: 1px solid #d4af37;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .initiative-entry.current-turn {
+            border-color: #ffd700;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+            background: rgba(255, 215, 0, 0.1);
+        }
+
+        .initiative-order {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ffd700;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .initiative-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #8b4513, #a0522d);
+            border: 2px solid #d4af37;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .initiative-info {
+            flex-grow: 1;
+        }
+
+        .initiative-name {
+            font-weight: 600;
+            color: #ffd700;
+        }
+
+        .initiative-roll {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #d4af37;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .roll-results {
+            margin: 10px 0;
+            font-size: 0.9rem;
+            color: #d4af37;
+        }
+
+        .multi-roll-result {
+            display: inline-block;
+            background: rgba(139, 69, 19, 0.4);
+            border: 1px solid #d4af37;
+            border-radius: 5px;
+            padding: 2px 6px;
+            margin: 2px;
+            font-weight: bold;
+        }
+
+        .multi-roll-total {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #ffd700;
+            margin-left: 10px;
         }
 
         .dice-option {
@@ -678,24 +850,70 @@
 
     <div class="main-content" id="gameArea" style="display: none;">
         <div class="dice-section">
-            <div class="dice-selector">
-                <button class="dice-option" data-sides="2">D2</button>
-                <button class="dice-option active" data-sides="4">D4</button>
-                <button class="dice-option" data-sides="6">D6</button>
-                <button class="dice-option" data-sides="8">D8</button>
-                <button class="dice-option" data-sides="10">D10</button>
-                <button class="dice-option" data-sides="12">D12</button>
-                <button class="dice-option" data-sides="20">D20</button>
-                <button class="dice-option" data-sides="100">D100</button>
+            <!-- Initiative Tracker (Host Only) -->
+            <div class="initiative-tracker" id="initiativeTracker" style="display: none;">
+                <div class="initiative-header">
+                    <div class="initiative-title">⚡ Initiative Order ⚡</div>
+                    <div>
+                        <button class="action-button" onclick="nextTurn()">▶️ Next Turn</button>
+                    </div>
+                </div>
+                <div class="initiative-list" id="initiativeList">
+                    <div style="text-align: center; color: #d4af37; padding: 20px;">
+                        Click "Roll Initiative" to start combat!
+                    </div>
+                </div>
+            </div>
+
+            <!-- Group Rolls (Host Only) -->
+            <div class="group-roll-section" id="groupRollSection" style="display: none;">
+                <h4>🎯 Group Rolls (DM Only)</h4>
+                <div style="margin-bottom: 10px;">
+                    <button class="group-roll-button" onclick="requestGroupRoll('perception')">👁️ Perception</button>
+                    <button class="group-roll-button" onclick="requestGroupRoll('stealth')">🤫 Stealth</button>
+                    <button class="group-roll-button" onclick="requestGroupRoll('investigation')">🔍 Investigation</button>
+                    <button class="group-roll-button" onclick="requestGroupRoll('insight')">🧠 Insight</button>
+                </div>
+                <div>
+                    <button class="group-roll-button" onclick="requestGroupRoll('strength')">💪 Strength</button>
+                    <button class="group-roll-button" onclick="requestGroupRoll('dexterity')">🏃 Dexterity</button>
+                    <button class="group-roll-button" onclick="requestGroupRoll('constitution')">❤️ Constitution</button>
+                    <button class="group-roll-button" onclick="requestGroupRoll('custom')">🎲 Custom Roll</button>
+                </div>
+            </div>
+
+            <!-- Multi-Dice Controls -->
+            <div class="dice-controls">
+                <div class="dice-selector">
+                    <button class="dice-option" data-sides="2">D2</button>
+                    <button class="dice-option" data-sides="4">D4</button>
+                    <button class="dice-option" data-sides="6">D6</button>
+                    <button class="dice-option" data-sides="8">D8</button>
+                    <button class="dice-option" data-sides="10">D10</button>
+                    <button class="dice-option" data-sides="12">D12</button>
+                    <button class="dice-option active" data-sides="20">D20</button>
+                    <button class="dice-option" data-sides="100">D100</button>
+                </div>
+
+                <div class="multi-dice-controls">
+                    <label>Number of dice:</label>
+                    <input type="number" id="diceCount" class="multi-dice-input" value="1" min="1" max="20">
+                    <label>Modifier:</label>
+                    <input type="number" id="diceModifier" class="multi-dice-input" value="0" min="-50" max="50">
+                    <button class="action-button" onclick="toggleAdvantage()">
+                        <span id="advantageText">Normal</span>
+                    </button>
+                </div>
             </div>
 
             <div class="dice-container">
-                <div class="dice-visual d4" id="dice">
+                <div class="dice-visual d20" id="dice">
                     <span class="dice-number" id="diceNumber">?</span>
                 </div>
                 <div class="result-display" id="result">Ready to roll!</div>
+                <div class="roll-results" id="rollResults"></div>
                 <button class="roll-button" id="rollButton" onclick="rollDice()">
-                    🎲 Roll D4 🎲
+                    🎲 Roll 1D20 🎲
                 </button>
             </div>
         </div>
@@ -731,16 +949,23 @@
         <div id="debugContent"></div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
     <script>
         let peer = null;
         let connections = {};
         let isHost = false;
         let playerName = '';
         let playerAvatar = '🧙‍♂️';
-        let currentDice = 4;
+        let currentDice = 20;
         let connectedPlayers = {};
         let isConnecting = false;
         let debugMode = false;
+        let diceCount = 1;
+        let diceModifier = 0;
+        let rollAdvantage = 'normal'; // 'advantage', 'disadvantage', 'normal'
+        let initiativeOrder = [];
+        let currentTurn = 0;
+        let pendingGroupRoll = null;
 
         const diceInfo = {
             2: { class: 'd2' },
@@ -759,13 +984,15 @@
             
             if (debugMode) {
                 const debugContent = document.getElementById('debugContent');
-                const debugEntry = document.createElement('div');
-                debugEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message} ${data ? JSON.stringify(data) : ''}`;
-                debugContent.appendChild(debugEntry);
-                
-                // Keep only last 20 entries
-                while (debugContent.children.length > 20) {
-                    debugContent.removeChild(debugContent.firstChild);
+                if (debugContent) {
+                    const debugEntry = document.createElement('div');
+                    debugEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message} ${data ? JSON.stringify(data) : ''}`;
+                    debugContent.appendChild(debugEntry);
+                    
+                    // Keep only last 20 entries
+                    while (debugContent.children.length > 20) {
+                        debugContent.removeChild(debugContent.firstChild);
+                    }
                 }
             }
         }
@@ -775,46 +1002,18 @@
             if (e.ctrlKey && e.key === 'd') {
                 e.preventDefault();
                 debugMode = !debugMode;
-                document.getElementById('debugInfo').style.display = debugMode ? 'block' : 'none';
+                const debugInfo = document.getElementById('debugInfo');
+                if (debugInfo) {
+                    debugInfo.style.display = debugMode ? 'block' : 'none';
+                }
                 debugLog('Debug mode toggled', { enabled: debugMode });
             }
         });
 
-        // Check if PeerJS is loaded
-        function checkPeerJS() {
-            return typeof Peer !== 'undefined';
-        }
-
-        // Load PeerJS if not already loaded
-        function loadPeerJS() {
-            return new Promise((resolve, reject) => {
-                if (checkPeerJS()) {
-                    debugLog('PeerJS already loaded');
-                    resolve();
-                    return;
-                }
-
-                debugLog('Loading PeerJS...');
-                const script = document.createElement('script');
-                script.src = 'https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js';
-                script.onload = () => {
-                    debugLog('PeerJS loaded successfully');
-                    resolve();
-                };
-                script.onerror = () => {
-                    debugLog('Failed to load PeerJS');
-                    reject(new Error('Failed to load PeerJS'));
-                };
-                document.head.appendChild(script);
-            });
-        }
-
         // Initialize PeerJS with better error handling
         function initializePeer() {
-            return new Promise(async (resolve, reject) => {
+            return new Promise((resolve, reject) => {
                 try {
-                    // Ensure PeerJS is loaded
-                    await loadPeerJS();
                     debugLog('Initializing peer connection...');
 
                     // Clean up any existing peer
@@ -824,7 +1023,7 @@
                     }
 
                     peer = new Peer({
-                        debug: 2, // Enable debug logging
+                        debug: 1,
                         config: {
                             'iceServers': [
                                 { urls: 'stun:stun.l.google.com:19302' },
@@ -839,7 +1038,7 @@
                             peer.destroy();
                         }
                         reject(new Error('Connection timeout'));
-                    }, 15000); // 15 second timeout
+                    }, 15000);
 
                     peer.on('open', (id) => {
                         clearTimeout(timeout);
@@ -904,15 +1103,15 @@
 
             try {
                 isConnecting = true;
-                const createButton = event.target;
-                createButton.disabled = true;
+                const createButton = event?.target;
+                if (createButton) createButton.disabled = true;
                 
                 updateStatus('Loading networking...', 'connecting');
                 debugLog('Starting room creation');
                 
                 // Validate inputs
                 const hostNameInput = document.getElementById('hostName');
-                if (!hostNameInput.value.trim()) {
+                if (!hostNameInput?.value?.trim()) {
                     throw new Error('Host name is required');
                 }
                 
@@ -931,8 +1130,10 @@
                 
                 const peerId = await initializePeer();
                 
-                document.getElementById('hostId').textContent = peerId;
-                document.getElementById('roomInfo').style.display = 'block';
+                const hostIdElement = document.getElementById('hostId');
+                const roomInfoElement = document.getElementById('roomInfo');
+                if (hostIdElement) hostIdElement.textContent = peerId;
+                if (roomInfoElement) roomInfoElement.style.display = 'block';
                 
                 // Add host to connected players
                 connectedPlayers[peerId] = { 
@@ -947,14 +1148,19 @@
                 showGameArea();
                 debugLog('Room created successfully', { peerId });
                 
+                // Show host-only features
+                const initiativeTracker = document.getElementById('initiativeTracker');
+                const groupRollSection = document.getElementById('groupRollSection');
+                if (initiativeTracker) initiativeTracker.style.display = 'block';
+                if (groupRollSection) groupRollSection.style.display = 'block';
+                
             } catch (error) {
                 debugLog('Error creating room', error);
                 updateStatus(`Failed to create room: ${error.message}`, 'disconnected');
             } finally {
                 isConnecting = false;
-                if (event && event.target) {
-                    event.target.disabled = false;
-                }
+                const createButton = event?.target;
+                if (createButton) createButton.disabled = false;
             }
         }
 
@@ -967,11 +1173,13 @@
 
             try {
                 isConnecting = true;
-                const joinButton = event.target;
-                joinButton.disabled = true;
+                const joinButton = event?.target;
+                if (joinButton) joinButton.disabled = true;
                 
-                const hostId = document.getElementById('hostIdInput').value.trim();
-                const name = document.getElementById('playerName').value.trim();
+                const hostIdInput = document.getElementById('hostIdInput');
+                const playerNameInput = document.getElementById('playerName');
+                const hostId = hostIdInput?.value?.trim();
+                const name = playerNameInput?.value?.trim();
                 
                 if (!hostId) {
                     throw new Error('Host ID is required');
@@ -1007,7 +1215,7 @@
                     debugLog('Connection timeout');
                     updateStatus('Connection timeout. Check Host ID.', 'disconnected');
                     isConnecting = false;
-                    joinButton.disabled = false;
+                    if (joinButton) joinButton.disabled = false;
                 }, 15000);
                 
                 conn.on('open', () => {
@@ -1030,7 +1238,7 @@
                     updateStatus('Connected to campaign!', 'connected');
                     showGameArea();
                     isConnecting = false;
-                    joinButton.disabled = false;
+                    if (joinButton) joinButton.disabled = false;
                 });
                 
                 conn.on('error', (error) => {
@@ -1038,7 +1246,7 @@
                     debugLog('Connection error', error);
                     updateStatus('Failed to connect. Check Host ID.', 'disconnected');
                     isConnecting = false;
-                    joinButton.disabled = false;
+                    if (joinButton) joinButton.disabled = false;
                 });
                 
                 conn.on('close', () => {
@@ -1055,9 +1263,8 @@
                 debugLog('Error joining room', error);
                 updateStatus(`Failed to join room: ${error.message}`, 'disconnected');
                 isConnecting = false;
-                if (event && event.target) {
-                    event.target.disabled = false;
-                }
+                const joinButton = event?.target;
+                if (joinButton) joinButton.disabled = false;
             }
         }
 
@@ -1190,8 +1397,32 @@
                             player.avatar, 
                             data.diceType, 
                             data.result, 
-                            data.rollType || 'normal'
+                            data.rollType || 'normal',
+                            data.rolls,
+                            data.modifier,
+                            data.count,
+                            data.advantage
                         );
+                    }
+                    break;
+                    
+                case 'groupRollRequest':
+                    if (data.rollType) {
+                        handleGroupRollRequest(data.rollType, data.customDice);
+                    }
+                    break;
+                    
+                case 'initiativeRoll':
+                    if (data.player && typeof data.roll === 'number') {
+                        addInitiativeRoll(data.player, data.roll);
+                    }
+                    break;
+                    
+                case 'initiativeUpdate':
+                    if (data.initiativeOrder) {
+                        initiativeOrder = data.initiativeOrder;
+                        currentTurn = data.currentTurn || 0;
+                        updateInitiativeDisplay();
                     }
                     break;
                     
@@ -1231,16 +1462,21 @@
         // Update connection status
         function updateStatus(message, type) {
             const status = document.getElementById('connectionStatus');
-            status.textContent = message;
-            status.className = `status ${type}`;
-            status.style.display = 'block';
+            if (status) {
+                status.textContent = message;
+                status.className = `status ${type}`;
+                status.style.display = 'block';
+            }
             debugLog('Status updated', { message, type });
         }
 
         // Show game area
         function showGameArea() {
-            document.getElementById('gameArea').style.display = 'grid';
-            selectDice(4);
+            const gameArea = document.getElementById('gameArea');
+            if (gameArea) {
+                gameArea.style.display = 'grid';
+            }
+            selectDice(20);
             debugLog('Game area shown');
         }
 
@@ -1275,7 +1511,10 @@
 
         // Copy host ID to clipboard
         function copyHostId() {
-            const hostId = document.getElementById('hostId').textContent;
+            const hostIdElement = document.getElementById('hostId');
+            if (!hostIdElement) return;
+            
+            const hostId = hostIdElement.textContent;
             navigator.clipboard.writeText(hostId).then(() => {
                 alert('Host ID copied to clipboard!');
             }).catch(err => {
@@ -1293,7 +1532,10 @@
 
         // Share room link
         function shareRoomLink() {
-            const hostId = document.getElementById('hostId').textContent;
+            const hostIdElement = document.getElementById('hostId');
+            if (!hostIdElement) return;
+            
+            const hostId = hostIdElement.textContent;
             const url = window.location.href.split('?')[0] + '?host=' + encodeURIComponent(hostId);
             
             if (navigator.share) {
@@ -1318,7 +1560,10 @@
             const hostId = urlParams.get('host');
             if (hostId) {
                 switchTab('join');
-                document.getElementById('hostIdInput').value = hostId;
+                const hostIdInput = document.getElementById('hostIdInput');
+                if (hostIdInput) {
+                    hostIdInput.value = hostId;
+                }
                 debugLog('Host ID found in URL', { hostId });
             }
         }
@@ -1332,6 +1577,45 @@
 
         function rollDie(sides) {
             return Math.floor(getSecureRandom() * sides) + 1;
+        }
+
+        // Toggle advantage/disadvantage
+        function toggleAdvantage() {
+            const states = ['normal', 'advantage', 'disadvantage'];
+            const currentIndex = states.indexOf(rollAdvantage);
+            rollAdvantage = states[(currentIndex + 1) % states.length];
+            
+            const advantageText = document.getElementById('advantageText');
+            if (advantageText) {
+                const displayText = {
+                    'normal': 'Normal',
+                    'advantage': 'Advantage',
+                    'disadvantage': 'Disadvantage'
+                };
+                advantageText.textContent = displayText[rollAdvantage];
+            }
+            
+            updateRollButton();
+            debugLog('Advantage toggled', { rollAdvantage });
+        }
+
+        // Update roll button text
+        function updateRollButton() {
+            const rollButton = document.getElementById('rollButton');
+            if (!rollButton) return;
+            
+            let buttonText = `🎲 Roll ${diceCount}D${currentDice}`;
+            
+            if (diceModifier !== 0) {
+                buttonText += ` ${diceModifier >= 0 ? '+' : ''}${diceModifier}`;
+            }
+            
+            if (rollAdvantage !== 'normal') {
+                buttonText += ` (${rollAdvantage === 'advantage' ? 'ADV' : 'DIS'})`;
+            }
+            
+            buttonText += ' 🎲';
+            rollButton.textContent = buttonText;
         }
 
         // Dice selection
@@ -1352,10 +1636,7 @@
                 dice.className = `dice-visual ${info.class}`;
             }
             
-            const rollButton = document.getElementById('rollButton');
-            if (rollButton) {
-                rollButton.textContent = `🎲 Roll D${sides} 🎲`;
-            }
+            updateRollButton();
             
             const diceNumber = document.getElementById('diceNumber');
             const result = document.getElementById('result');
@@ -1368,12 +1649,13 @@
             debugLog('Dice selected', { sides });
         }
 
-        // Roll dice with better error handling
+        // Roll dice with multi-dice and advantage support
         function rollDice() {
             const button = document.getElementById('rollButton');
             const dice = document.getElementById('dice');
             const diceNumber = document.getElementById('diceNumber');
             const result = document.getElementById('result');
+            const rollResults = document.getElementById('rollResults');
             
             if (!button || !dice || !diceNumber || !result) {
                 debugLog('Missing DOM elements for dice roll');
@@ -1384,7 +1666,8 @@
                 debugLog('Roll button is disabled');
                 return;
             }
-            
+
+            const originalText = button.textContent;
             button.disabled = true;
             button.textContent = '🎲 Rolling... 🎲';
             
@@ -1393,36 +1676,82 @@
             result.textContent = 'Rolling...';
             result.className = 'result-display';
             
-            debugLog('Starting dice roll', { dice: currentDice });
-            
             setTimeout(() => {
                 try {
-                    const roll = rollDie(currentDice);
-                    debugLog('Dice rolled', { result: roll, dice: currentDice });
+                    let rolls = [];
+                    let finalRoll = 0;
                     
-                    diceNumber.textContent = roll;
-                    result.textContent = roll;
+                    // Handle advantage/disadvantage for D20 rolls
+                    if (currentDice === 20 && rollAdvantage !== 'normal') {
+                        const roll1 = rollDie(20);
+                        const roll2 = rollDie(20);
+                        rolls = [roll1, roll2];
+                        finalRoll = rollAdvantage === 'advantage' ? Math.max(roll1, roll2) : Math.min(roll1, roll2);
+                        
+                        if (rollResults) {
+                            rollResults.innerHTML = `
+                                <div>Rolled 2D20 (${rollAdvantage}): 
+                                    <span class="multi-roll-result">${roll1}</span>
+                                    <span class="multi-roll-result">${roll2}</span>
+                                    <span class="multi-roll-total">Using: ${finalRoll}</span>
+                                </div>
+                            `;
+                        }
+                    } else {
+                        // Regular multi-dice roll
+                        for (let i = 0; i < diceCount; i++) {
+                            rolls.push(rollDie(currentDice));
+                        }
+                        finalRoll = rolls.reduce((sum, roll) => sum + roll, 0);
+                        
+                        if (rollResults && diceCount > 1) {
+                            rollResults.innerHTML = `
+                                <div>Individual rolls: 
+                                    ${rolls.map(roll => `<span class="multi-roll-result">${roll}</span>`).join(' ')}
+                                    <span class="multi-roll-total">Total: ${finalRoll}</span>
+                                </div>
+                            `;
+                        } else if (rollResults) {
+                            rollResults.innerHTML = '';
+                        }
+                    }
+                    
+                    // Apply modifier
+                    const totalWithModifier = finalRoll + diceModifier;
+                    
+                    diceNumber.textContent = rolls.length === 1 ? rolls[0] : finalRoll;
+                    result.textContent = totalWithModifier;
                     
                     // Check for critical rolls
                     let rollType = 'normal';
-                    if (currentDice === 20 && roll === 20) {
+                    if (currentDice === 20 && finalRoll === 20) {
                         result.classList.add('critical-success');
-                        result.textContent = `🌟 ${roll} 🌟 CRITICAL!`;
+                        result.textContent = `🌟 ${totalWithModifier} 🌟 CRITICAL!`;
                         rollType = 'critical';
-                    } else if (currentDice === 20 && roll === 1) {
+                    } else if (currentDice === 20 && finalRoll === 1) {
                         result.classList.add('critical-fail');
-                        result.textContent = `💀 ${roll} 💀 FUMBLE!`;
+                        result.textContent = `💀 ${totalWithModifier} 💀 FUMBLE!`;
                         rollType = 'fumble';
-                    } else if (roll === currentDice) {
+                    } else if (finalRoll === currentDice && diceCount === 1) {
                         result.classList.add('critical-success');
                         rollType = 'critical';
-                    } else if (roll === 1 && currentDice > 2) {
+                    } else if (finalRoll === 1 && currentDice > 2 && diceCount === 1) {
                         result.classList.add('critical-fail');
                         rollType = 'fumble';
                     }
                     
                     // Add to local feed
-                    addToFeed(playerName || 'Unknown Player', playerAvatar || '🎲', currentDice, roll, rollType);
+                    addToFeed(
+                        playerName || 'Unknown Player', 
+                        playerAvatar || '🎲', 
+                        currentDice, 
+                        totalWithModifier, 
+                        rollType,
+                        rolls,
+                        diceModifier,
+                        diceCount,
+                        rollAdvantage
+                    );
                     
                     // Broadcast to other players
                     const rollData = {
@@ -1432,12 +1761,22 @@
                             avatar: playerAvatar || '🎲' 
                         },
                         diceType: currentDice,
-                        result: roll,
-                        rollType: rollType
+                        result: totalWithModifier,
+                        rollType: rollType,
+                        rolls: rolls,
+                        modifier: diceModifier,
+                        count: diceCount,
+                        advantage: rollAdvantage
                     };
                     
                     debugLog('Broadcasting roll', rollData);
                     broadcastToAll(rollData);
+                    
+                    // Check if this was a group roll response
+                    if (pendingGroupRoll) {
+                        sendGroupRollResponse(totalWithModifier, rollType);
+                        pendingGroupRoll = null;
+                    }
                     
                 } catch (error) {
                     debugLog('Error during dice roll', error);
@@ -1445,13 +1784,189 @@
                 } finally {
                     dice.classList.remove('rolling');
                     button.disabled = false;
-                    button.textContent = `🎲 Roll D${currentDice} 🎲`;
+                    button.textContent = originalText;
                 }
             }, 2000);
         }
 
-        // Add roll to feed with better validation
-        function addToFeed(playerName, avatar, diceType, roll, rollType = 'normal') {
+        // Group Roll Functions
+        function requestGroupRoll(rollType) {
+            if (!isHost) return;
+            
+            let diceToRoll = 20;
+            let rollName = rollType;
+            
+            if (rollType === 'custom') {
+                rollName = prompt('Enter roll name:') || 'Custom Roll';
+                const customDice = prompt('Enter dice type (4, 6, 8, 10, 12, 20, 100):', '20');
+                diceToRoll = parseInt(customDice) || 20;
+            }
+            
+            debugLog('Requesting group roll', { rollType: rollName, dice: diceToRoll });
+            
+            // Broadcast group roll request
+            broadcastToAll({
+                type: 'groupRollRequest',
+                rollType: rollName,
+                customDice: diceToRoll
+            });
+            
+            addToFeed('System', '📢', 0, `DM requested ${rollName} rolls from everyone!`, 'system');
+        }
+
+        function handleGroupRollRequest(rollType, customDice = 20) {
+            if (isHost) return; // Host doesn't roll for their own requests
+            
+            pendingGroupRoll = rollType;
+            
+            // Set appropriate dice
+            selectDice(customDice);
+            const diceCountInput = document.getElementById('diceCount');
+            const diceModifierInput = document.getElementById('diceModifier');
+            if (diceCountInput) diceCountInput.value = 1;
+            if (diceModifierInput) diceModifierInput.value = 0;
+            diceCount = 1;
+            diceModifier = 0;
+            rollAdvantage = 'normal';
+            updateRollButton();
+            
+            addToFeed('System', '🎯', 0, `Roll requested: ${rollType}! Click roll to respond.`, 'system');
+            
+            // Flash the roll button
+            const rollButton = document.getElementById('rollButton');
+            if (rollButton) {
+                rollButton.style.animation = 'glow 1s ease-in-out infinite alternate';
+                setTimeout(() => {
+                    rollButton.style.animation = '';
+                }, 5000);
+            }
+        }
+
+        function sendGroupRollResponse(result, rollType) {
+            // This is handled automatically when broadcasting the roll
+            // The roll will show up in the feed with the player's result
+        }
+
+        // Initiative Functions
+        function rollInitiative() {
+            if (!isHost) return;
+            
+            initiativeOrder = [];
+            currentTurn = 0;
+            
+            debugLog('Rolling initiative for all players');
+            
+            // Add all connected players to initiative
+            Object.values(connectedPlayers).forEach(player => {
+                const roll = rollDie(20);
+                initiativeOrder.push({
+                    name: player.name,
+                    avatar: player.avatar,
+                    roll: roll,
+                    id: player.id
+                });
+            });
+            
+            // Sort by initiative (highest first)
+            initiativeOrder.sort((a, b) => b.roll - a.roll);
+            
+            // Broadcast initiative order to all players
+            broadcastToAll({
+                type: 'initiativeUpdate',
+                initiativeOrder: initiativeOrder,
+                currentTurn: currentTurn
+            });
+            
+            updateInitiativeDisplay();
+            addToFeed('System', '⚡', 0, 'Initiative rolled! Combat begins!', 'system');
+        }
+
+        function addInitiativeRoll(player, roll) {
+            // This function can be used for manual initiative if needed
+            const existingIndex = initiativeOrder.findIndex(entry => entry.id === player.id);
+            
+            if (existingIndex >= 0) {
+                initiativeOrder[existingIndex].roll = roll;
+            } else {
+                initiativeOrder.push({
+                    name: player.name,
+                    avatar: player.avatar,
+                    roll: roll,
+                    id: player.id
+                });
+            }
+            
+            // Re-sort
+            initiativeOrder.sort((a, b) => b.roll - a.roll);
+            updateInitiativeDisplay();
+        }
+
+        function nextTurn() {
+            if (!isHost) return;
+            
+            currentTurn = (currentTurn + 1) % initiativeOrder.length;
+            
+            // Broadcast turn change
+            broadcastToAll({
+                type: 'initiativeUpdate',
+                initiativeOrder: initiativeOrder,
+                currentTurn: currentTurn
+            });
+            
+            updateInitiativeDisplay();
+            
+            if (initiativeOrder[currentTurn]) {
+                addToFeed('System', '▶️', 0, `${initiativeOrder[currentTurn].name}'s turn!`, 'system');
+            }
+        }
+
+        function clearInitiative() {
+            if (!isHost) return;
+            
+            initiativeOrder = [];
+            currentTurn = 0;
+            
+            // Broadcast clear to all players
+            broadcastToAll({
+                type: 'initiativeUpdate',
+                initiativeOrder: [],
+                currentTurn: 0
+            });
+            
+            updateInitiativeDisplay();
+            addToFeed('System', '🔄', 0, 'Initiative cleared', 'system');
+        }
+
+        function updateInitiativeDisplay() {
+            const initiativeList = document.getElementById('initiativeList');
+            if (!initiativeList) return;
+            
+            if (initiativeOrder.length === 0) {
+                initiativeList.innerHTML = '<div style="text-align: center; color: #d4af37; padding: 20px;">Click "Roll Initiative" to start combat!</div>';
+                return;
+            }
+            
+            initiativeList.innerHTML = '';
+            
+            initiativeOrder.forEach((entry, index) => {
+                const div = document.createElement('div');
+                div.className = `initiative-entry ${index === currentTurn ? 'current-turn' : ''}`;
+                
+                div.innerHTML = `
+                    <div class="initiative-order">${index + 1}</div>
+                    <div class="initiative-avatar">${entry.avatar}</div>
+                    <div class="initiative-info">
+                        <div class="initiative-name">${entry.name}</div>
+                    </div>
+                    <div class="initiative-roll">${entry.roll}</div>
+                `;
+                
+                initiativeList.appendChild(div);
+            });
+        }
+
+        // Add roll to feed with multi-dice support
+        function addToFeed(playerName, avatar, diceType, roll, rollType = 'normal', rolls = null, modifier = 0, count = 1, advantage = 'normal') {
             const feed = document.getElementById('rollFeed');
             if (!feed) return;
             
@@ -1463,8 +1978,33 @@
             const safeRoll = (typeof roll === 'number') ? roll : '?';
             
             let rollText = safeRoll;
+            let rollDetails = '';
+            
             if (rollType === 'system') {
                 rollText = '';
+                rollDetails = roll || 'System message';
+            } else {
+                // Create roll details
+                if (rolls && rolls.length > 1) {
+                    rollDetails = `Rolled ${rolls.length}D${diceType || '?'}: [${rolls.join(', ')}]`;
+                    if (modifier !== 0) {
+                        rollDetails += ` ${modifier >= 0 ? '+' : ''}${modifier}`;
+                    }
+                } else if (count > 1) {
+                    rollDetails = `Rolled ${count}D${diceType || '?'}`;
+                    if (modifier !== 0) {
+                        rollDetails += ` ${modifier >= 0 ? '+' : ''}${modifier}`;
+                    }
+                } else {
+                    rollDetails = `Rolled D${diceType || '?'}`;
+                    if (modifier !== 0) {
+                        rollDetails += ` ${modifier >= 0 ? '+' : ''}${modifier}`;
+                    }
+                }
+                
+                if (advantage !== 'normal') {
+                    rollDetails += ` (${advantage === 'advantage' ? 'Advantage' : 'Disadvantage'})`;
+                }
             }
             
             entry.className = `roll-entry ${rollType}`;
@@ -1472,7 +2012,7 @@
                 <div class="player-avatar">${safeAvatar}</div>
                 <div class="roll-info">
                     <div class="player-name">${safeName}</div>
-                    <div class="roll-details">${rollType === 'system' ? (roll || 'System message') : `Rolled D${diceType || '?'}`}</div>
+                    <div class="roll-details">${rollDetails}</div>
                 </div>
                 ${rollText ? `<div class="roll-result ${rollType}">${rollText}</div>` : ''}
                 <div class="timestamp">${new Date().toLocaleTimeString()}</div>
@@ -1493,17 +2033,46 @@
             // Scroll to top to show newest rolls
             feed.scrollTop = 0;
             
-            debugLog('Added to feed', { playerName: safeName, diceType, roll: safeRoll, rollType });
+            debugLog('Added to feed', { playerName: safeName, diceType, roll: safeRoll, rollType, rolls, modifier });
         }
 
         // Dice selection event listeners
-        document.querySelectorAll('.dice-option').forEach(button => {
-            button.addEventListener('click', () => {
-                const sides = parseInt(button.dataset.sides);
-                if (!isNaN(sides)) {
-                    selectDice(sides);
-                }
+        document.addEventListener('DOMContentLoaded', () => {
+            // Dice option listeners
+            document.querySelectorAll('.dice-option').forEach(button => {
+                button.addEventListener('click', () => {
+                    const sides = parseInt(button.dataset.sides);
+                    if (!isNaN(sides)) {
+                        selectDice(sides);
+                    }
+                });
             });
+
+            // Multi-dice input listeners
+            const diceCountInput = document.getElementById('diceCount');
+            const diceModifierInput = document.getElementById('diceModifier');
+            
+            if (diceCountInput) {
+                diceCountInput.addEventListener('input', () => {
+                    diceCount = Math.max(1, Math.min(20, parseInt(diceCountInput.value) || 1));
+                    diceCountInput.value = diceCount; // Ensure valid value is shown
+                    updateRollButton();
+                });
+            }
+            
+            if (diceModifierInput) {
+                diceModifierInput.addEventListener('input', () => {
+                    diceModifier = Math.max(-50, Math.min(50, parseInt(diceModifierInput.value) || 0));
+                    diceModifierInput.value = diceModifier; // Ensure valid value is shown
+                    updateRollButton();
+                });
+            }
+
+            // Initialize everything
+            setupAvatarSelection();
+            checkUrlForHost();
+            selectDice(20);
+            updateRollButton();
         });
 
         // Keyboard support
@@ -1511,20 +2080,16 @@
             if (e.code === 'Space' || e.code === 'Enter') {
                 const rollButton = document.getElementById('rollButton');
                 if (rollButton && !rollButton.disabled && rollButton.offsetParent !== null) {
+                    const activeElement = document.activeElement;
+                    // Don't trigger if user is typing in an input field
+                    if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+                        return;
+                    }
                     e.preventDefault();
                     rollDice();
                 }
             }
         });
-
-        // Initialize everything
-        function initialize() {
-            debugLog('Initializing application');
-            setupAvatarSelection();
-            checkUrlForHost();
-            selectDice(4);
-            debugLog('Initialization complete');
-        }
 
         // Clean up on page unload
         window.addEventListener('beforeunload', () => {
@@ -1534,8 +2099,9 @@
             }
         });
 
-        // Start the application
-        initialize();
+        debugLog('Script loaded successfully');
     </script>
 </body>
-</html>
+</html>" onclick="rollInitiative()">🎲 Roll Initiative</button>
+                        <button class="action-button" onclick="clearInitiative()">🔄 Clear</button>
+                        <button class="action-button
