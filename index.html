@@ -912,9 +912,12 @@
             <div class="instructions">
                 <strong>🎲 How to Host:</strong><br>
                 1. Click "Start Hosting" to create your room<br>
-                2. Share your Room ID with other players<br>
-                3. Players can join using the "Join Room" tab<br>
-                4. Start rolling dice together!
+                2. <strong>Wait a few seconds</strong> for the Room ID to appear<br>
+                3. <strong>Copy the Room ID</strong> that appears below<br>
+                4. <strong>Share the Room ID</strong> with your friends (Discord, text, etc.)<br>
+                5. Players use the Room ID in the "Join Room" tab<br>
+                6. Start rolling dice together!<br>
+                <small style="color: #ffd700;">💡 If connection fails, try refreshing the page and try again</small>
             </div>
         </div>
 
@@ -947,17 +950,27 @@
             <div id="joinStatus" class="status disconnected" style="display: none;">Connecting...</div>
             <div class="instructions">
                 <strong>🎲 How to Join:</strong><br>
-                1. Get the Room ID from your Dungeon Master<br>
-                2. Enter your character name<br>
-                3. Choose your avatar<br>
-                4. Click "Join Adventure" to connect!
+                1. Get the <strong>Room ID</strong> from your Dungeon Master<br>
+                2. <strong>Copy and paste</strong> the exact Room ID above<br>
+                3. Enter your character name and choose avatar<br>
+                4. Click "Join Adventure" to connect!<br>
+                <small style="color: #ffd700;">💡 Make sure the host is online and Room ID is correct!</small><br>
+                <small style="color: #ffd700;">🔄 If it fails, ask for a new Room ID from your DM</small>
             </div>
         </div>
     </div>
 
     <div id="gameArea" class="main-content">
         <div class="dice-section">
-            <h2 style="text-align: center; color: #ffd700; margin-bottom: 2rem; font-size: 2.2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);">🎲 Dice Rolling Chamber 🎲</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <button class="action-button" onclick="goBackToConnection()" style="margin: 0; padding: 12px 20px; font-size: 1rem;">
+                    ← Back to Lobby
+                </button>
+                <h2 style="text-align: center; color: #ffd700; margin: 0; font-size: 2.2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);">🎲 Dice Rolling Chamber 🎲</h2>
+                <div id="currentRoomId" style="background: rgba(139, 69, 19, 0.4); border: 2px solid #d4af37; border-radius: 8px; padding: 8px 12px; font-size: 0.9rem; color: #ffd700; font-family: 'Courier New', monospace; display: none;">
+                    Room: <span id="roomIdDisplay"></span>
+                </div>
+            </div>
             
             <div class="dice-controls">
                 <div class="dice-selector">
@@ -1013,11 +1026,12 @@
         <div class="dm-option" onclick="clearFeed()">
             🗑️ Clear Feed
         </div>
-        <div class="dm-option" onclick="broadcastMessage()">
+        <div class="dm-option" onclick="broadcastAnnouncement()">
             📢 Announce
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.0/peerjs.min.js"></script>
     <script>
         // Global variables
         let peer = null;
@@ -1027,14 +1041,149 @@
         let playerAvatar = '';
         let currentDiceType = 20;
         let rollHistory = [];
+        let connectedPlayers = new Map(); // Store player info
+        let currentPeerConfig = 0;
+        
+        // Multiple PeerJS server configurations as fallbacks
+        const peerConfigs = [
+            { debug: 2 }, // Default PeerJS cloud
+            { host: '0.peerjs.com', port: 443, secure: true, debug: 2 }, // Alternative 1
+            { host: 'peerjs-server.herokuapp.com', port: 443, secure: true, debug: 2 }, // Alternative 2
+        ];
         
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
             initializeAvatarSelectors();
             initializeDiceSelector();
+            
+            // Add offline mode option
+            addOfflineModeOption();
         });
 
-        // Avatar selection functionality
+        // Add offline mode option
+        function addOfflineModeOption() {
+            const hostTab = document.getElementById('hostTab');
+            const offlineButton = document.createElement('button');
+            offlineButton.className = 'action-button';
+            offlineButton.style.backgroundColor = '#8b4513';
+            offlineButton.style.borderColor = '#d4af37';
+            offlineButton.innerHTML = '🎲 Play Solo/Offline Mode';
+            offlineButton.onclick = function() {
+                startOfflineMode();
+            };
+            
+            // Insert before instructions
+            const instructions = hostTab.querySelector('.instructions');
+            hostTab.insertBefore(offlineButton, instructions);
+        }
+        
+        // Start offline mode (single player)
+        function startOfflineMode() {
+            const nameInput = document.getElementById('hostName');
+            
+            if (!nameInput.value.trim()) {
+                alert('Please enter your name!');
+                return;
+            }
+            
+            playerName = nameInput.value.trim();
+            const selectedAvatar = document.querySelector('#hostTab .avatar-option.selected');
+            playerAvatar = selectedAvatar ? selectedAvatar.dataset.avatar : '👑';
+            isHost = true;
+            
+            // Show DM button for offline mode
+            document.getElementById('dmButton').style.display = 'flex';
+            
+            // Switch to game area
+            switchToGameArea();
+            
+            // Show offline indicator
+            document.getElementById('currentRoomId').style.display = 'block';
+            document.getElementById('roomIdDisplay').textContent = 'OFFLINE MODE';
+            document.getElementById('roomIdDisplay').parentElement.style.background = 'rgba(139, 69, 19, 0.6)';
+            
+            // Add player to list
+            connectedPlayers.set('self', { name: playerName, avatar: playerAvatar, isHost: true });
+            updatePlayerList();
+            
+            // Add welcome message
+            addSystemMessage(`🎲 ${playerName} is playing in offline mode!`);
+            addSystemMessage(`💡 This mode works without internet - perfect for testing!`);
+        }
+
+        // Try connecting with different server configurations
+        async function tryConnectWithFallback(isHosting = true, targetId = null) {
+            const statusDiv = isHosting ? document.getElementById('hostStatus') : document.getElementById('joinStatus');
+            
+            for (let i = currentPeerConfig; i < peerConfigs.length; i++) {
+                try {
+                    statusDiv.textContent = `Trying server ${i + 1}/${peerConfigs.length}...`;
+                    
+                    const success = await attemptConnection(peerConfigs[i], isHosting, targetId);
+                    if (success) {
+                        currentPeerConfig = i;
+                        return true;
+                    }
+                } catch (error) {
+                    console.log(`Server ${i + 1} failed:`, error);
+                    continue;
+                }
+            }
+            
+            // All servers failed
+            statusDiv.className = 'status disconnected';
+            statusDiv.innerHTML = `
+                <div>❌ All servers failed. Try:</div>
+                <div>🔄 Refresh page and retry</div>
+                <div>🎲 Or use "Play Solo/Offline Mode" below</div>
+            `;
+            return false;
+        }
+        
+        // Attempt connection with specific config
+        function attemptConnection(config, isHosting, targetId) {
+            return new Promise((resolve, reject) => {
+                const testPeer = new Peer(config);
+                let timeout;
+                
+                testPeer.on('open', function(id) {
+                    clearTimeout(timeout);
+                    
+                    if (isHosting) {
+                        // Success for hosting
+                        peer = testPeer;
+                        setupHostEvents(id);
+                        resolve(true);
+                    } else {
+                        // Try to connect to target for joining
+                        const conn = testPeer.connect(targetId);
+                        
+                        conn.on('open', function() {
+                            peer = testPeer;
+                            setupJoinEvents(conn, targetId);
+                            resolve(true);
+                        });
+                        
+                        conn.on('error', function() {
+                            testPeer.destroy();
+                            reject(new Error('Connection to host failed'));
+                        });
+                    }
+                });
+                
+                testPeer.on('error', function(err) {
+                    clearTimeout(timeout);
+                    testPeer.destroy();
+                    reject(err);
+                });
+                
+                // 10 second timeout per attempt
+                timeout = setTimeout(() => {
+                    testPeer.destroy();
+                    reject(new Error('Timeout'));
+                }, 10000);
+            });
+        }
         function initializeAvatarSelectors() {
             document.querySelectorAll('.avatar-selector').forEach(selector => {
                 selector.querySelectorAll('.avatar-option').forEach(option => {
@@ -1127,30 +1276,12 @@
             const statusDiv = document.getElementById('hostStatus');
             statusDiv.style.display = 'block';
             statusDiv.className = 'status connecting';
-            statusDiv.textContent = 'Initializing room...';
+            statusDiv.textContent = 'Connecting to servers...';
             
-            // Simulate peer connection (replace with actual PeerJS in real implementation)
-            setTimeout(() => {
-                const roomId = generateRoomId();
-                statusDiv.className = 'status connected';
-                statusDiv.textContent = '🌟 Room Active! Players can now join.';
-                
-                const peerIdDiv = document.getElementById('hostPeerId');
-                peerIdDiv.style.display = 'block';
-                peerIdDiv.innerHTML = `<strong>🏰 Room ID:</strong><br>${roomId}`;
-                
-                // Show DM button for hosts
-                document.getElementById('dmButton').style.display = 'flex';
-                
-                // Switch to game area
-                switchToGameArea();
-                
-                // Add host to player list
-                updatePlayerList();
-                
-                // Add welcome message
-                addSystemMessage(`🏰 ${playerName} has started a new campaign!`);
-            }, 2000);
+            const success = await tryConnectWithFallback(true);
+            if (!success) {
+                console.log('All connection attempts failed');
+            }
         }
 
         // Join room functionality
@@ -1174,20 +1305,145 @@
             statusDiv.className = 'status connecting';
             statusDiv.textContent = 'Connecting to adventure...';
             
-            // Simulate connection (replace with actual PeerJS in real implementation)
-            setTimeout(() => {
-                statusDiv.className = 'status connected';
-                statusDiv.textContent = '⚔️ Connected! Ready for adventure!';
-                
-                // Switch to game area
-                switchToGameArea();
-                
-                // Add player to list
-                updatePlayerList();
-                
-                // Add join message
-                addSystemMessage(`⚔️ ${playerName} has joined the party!`);
-            }, 2000);
+            const success = await tryConnectWithFallback(false, roomInput.value.trim());
+            if (!success) {
+                console.log('Failed to join room');
+            }
+        }
+
+        // Go back to connection screen
+        function goBackToConnection() {
+            // Disconnect from all peers
+            if (peer) {
+                peer.destroy();
+                peer = null;
+            }
+            
+            // Clear connections
+            connections = {};
+            connectedPlayers.clear();
+            
+            // Reset variables
+            isHost = false;
+            playerName = '';
+            playerAvatar = '';
+            
+            // Hide game area and show connection area
+            document.getElementById('gameArea').style.display = 'none';
+            document.getElementById('connectionArea').style.display = 'block';
+            
+            // Hide DM button
+            document.getElementById('dmButton').style.display = 'none';
+            
+            // Clear status displays
+            document.getElementById('hostStatus').style.display = 'none';
+            document.getElementById('joinStatus').style.display = 'none';
+            document.getElementById('hostPeerId').style.display = 'none';
+            
+            // Clear input fields
+            document.getElementById('hostName').value = 'Dungeon Master';
+            document.getElementById('playerName').value = '';
+            document.getElementById('roomId').value = '';
+            
+            // Reset avatar selections
+            document.querySelectorAll('.avatar-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            document.querySelector('#hostTab .avatar-option[data-avatar="👑"]').classList.add('selected');
+            document.querySelector('#joinTab .avatar-option[data-avatar="⚔️"]').classList.add('selected');
+            
+            // Clear roll feed
+            document.getElementById('rollFeed').innerHTML = '';
+        }
+
+        // Handle incoming messages from other players
+        function handleIncomingMessage(data, senderId) {
+            console.log('Received message:', data, 'from:', senderId);
+            
+            switch(data.type) {
+                case 'player_join':
+                    // Add new player to the list
+                    connectedPlayers.set(senderId, {
+                        name: data.data.name,
+                        avatar: data.data.avatar,
+                        isHost: false
+                    });
+                    updatePlayerList();
+                    addSystemMessage(`⚔️ ${data.data.name} has joined the party!`);
+                    
+                    // If we're the host, broadcast current players to the new player
+                    if (isHost) {
+                        const currentPlayers = Array.from(connectedPlayers.entries()).map(([id, info]) => ({
+                            id: id === 'host' ? 'host' : id,
+                            ...info
+                        }));
+                        
+                        connections[senderId].send({
+                            type: 'player_list_update',
+                            data: currentPlayers
+                        });
+                        
+                        // Broadcast new player to all other players
+                        broadcastMessage({
+                            type: 'player_join',
+                            data: data.data
+                        }, senderId);
+                    }
+                    break;
+                    
+                case 'player_list_update':
+                    // Update our player list with the current players
+                    connectedPlayers.clear();
+                    data.data.forEach(player => {
+                        if (player.id === 'host') {
+                            connectedPlayers.set('host', player);
+                        } else {
+                            connectedPlayers.set(player.id, player);
+                        }
+                    });
+                    // Add ourselves
+                    connectedPlayers.set('self', { name: playerName, avatar: playerAvatar, isHost: false });
+                    updatePlayerList();
+                    break;
+                    
+                case 'dice_roll':
+                    // Display the dice roll from another player
+                    const rollData = data.data;
+                    addRollToFeed(
+                        rollData.playerName,
+                        rollData.playerAvatar,
+                        rollData.rollType,
+                        rollData.result,
+                        rollData.isCritical,
+                        rollData.isFumble,
+                        rollData.results,
+                        rollData.modifier,
+                        rollData.isSecret
+                    );
+                    break;
+                    
+                case 'system_message':
+                    addSystemMessage(data.data.message);
+                    break;
+                    
+                case 'clear_feed':
+                    document.getElementById('rollFeed').innerHTML = '';
+                    addSystemMessage('📜 The chronicle has been cleared by the Dungeon Master.');
+                    break;
+            }
+        }
+        
+        // Broadcast message to all connected players
+        function broadcastMessage(message, excludeId = null) {
+            Object.keys(connections).forEach(peerId => {
+                if (peerId !== excludeId && connections[peerId]) {
+                    try {
+                        connections[peerId].send(message);
+                    } catch (error) {
+                        console.error('Failed to send message to', peerId, error);
+                    }
+                }
+            });
         }
 
         // Generate a random room ID
@@ -1204,13 +1460,17 @@
         // Update player list
         function updatePlayerList() {
             const playerList = document.getElementById('playerList');
-            const playerElement = document.createElement('div');
-            playerElement.className = 'connected-player';
-            playerElement.innerHTML = `
-                <span style="font-size: 1.4rem;">${playerAvatar}</span>
-                <span>${playerName}${isHost ? ' (DM)' : ''}</span>
-            `;
-            playerList.appendChild(playerElement);
+            playerList.innerHTML = '';
+            
+            connectedPlayers.forEach((playerInfo, playerId) => {
+                const playerElement = document.createElement('div');
+                playerElement.className = 'connected-player';
+                playerElement.innerHTML = `
+                    <span style="font-size: 1.4rem;">${playerInfo.avatar}</span>
+                    <span>${playerInfo.name}${playerInfo.isHost ? ' (DM)' : ''}</span>
+                `;
+                playerList.appendChild(playerElement);
+            });
         }
 
         // Roll dice functionality
@@ -1273,6 +1533,30 @@
                 
                 // Add to roll feed
                 addRollToFeed(playerName, playerAvatar, `${diceCount}d${currentDiceType}${modifier !== 0 ? ` ${modifier >= 0 ? '+' : ''}${modifier}` : ''}`, finalTotal, isCritical, isFumble, results, modifier);
+                
+                // Broadcast roll to all players (skip if offline mode)
+                if (peer && connections && Object.keys(connections).length > 0) {
+                    const rollMessage = {
+                        type: 'dice_roll',
+                        data: {
+                            playerName: playerName,
+                            playerAvatar: playerAvatar,
+                            rollType: `${diceCount}d${currentDiceType}${modifier !== 0 ? ` ${modifier >= 0 ? '+' : ''}${modifier}` : ''}`,
+                            result: finalTotal,
+                            isCritical: isCritical,
+                            isFumble: isFumble,
+                            results: results,
+                            modifier: modifier,
+                            isSecret: false
+                        }
+                    };
+                    
+                    if (isHost) {
+                        broadcastMessage(rollMessage);
+                    } else if (connections['host']) {
+                        connections['host'].send(rollMessage);
+                    }
+                }
                 
                 // Re-enable button
                 rollButton.disabled = false;
@@ -1351,19 +1635,38 @@
             const isFumble = currentDiceType === 20 && result === 1;
             
             addRollToFeed('Dungeon Master', '👑', `d${currentDiceType}`, result, isCritical, isFumble, [result], 0, true);
+            
+            // Don't broadcast secret rolls - only visible to DM
         }
 
         function clearFeed() {
             document.getElementById('dmDropdown').classList.remove('show');
             document.getElementById('rollFeed').innerHTML = '';
             addSystemMessage('📜 The chronicle has been cleared by the Dungeon Master.');
+            
+            // Broadcast clear command to all players
+            if (isHost && peer) {
+                broadcastMessage({
+                    type: 'clear_feed',
+                    data: {}
+                });
+            }
         }
 
-        function broadcastMessage() {
+        function broadcastAnnouncement() {
             document.getElementById('dmDropdown').classList.remove('show');
             const message = prompt('Enter your announcement:');
             if (message && message.trim()) {
-                addSystemMessage(`📢 DM Announcement: ${message.trim()}`);
+                const announcement = `📢 DM Announcement: ${message.trim()}`;
+                addSystemMessage(announcement);
+                
+                // Broadcast announcement to all players
+                if (isHost && peer) {
+                    broadcastMessage({
+                        type: 'system_message',
+                        data: { message: announcement }
+                    });
+                }
             }
         }
 
