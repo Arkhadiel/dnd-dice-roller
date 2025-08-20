@@ -158,6 +158,20 @@
             user-select: all;
         }
 
+        .peer-id {
+            background: linear-gradient(145deg, #654321, #2c1810);
+            border: 2px solid #d4af37;
+            border-radius: 10px;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #d4af37;
+            text-align: center;
+            margin: 10px 0;
+            word-break: break-all;
+            user-select: all;
+        }
+
         .action-button {
             background: linear-gradient(145deg, #d4af37, #b8860b);
             border: 3px solid #ffd700;
@@ -609,10 +623,11 @@
             
             <div id="roomInfo" style="display: none;">
                 <div class="instructions">
-                    <strong>🎯 Share this room code with your players:</strong>
+                    <strong>🎯 Share this Host ID with your players:</strong><br>
+                    <small>Players need to enter this exact ID to connect</small>
                 </div>
-                <div class="room-code" id="roomCode">XXXX-XXXX</div>
-                <button class="action-button" onclick="copyRoomCode()">📋 Copy Room Code</button>
+                <div class="peer-id" id="hostId">Generating...</div>
+                <button class="action-button" onclick="copyHostId()">📋 Copy Host ID</button>
                 <button class="action-button" onclick="shareRoomLink()">🔗 Share Link</button>
             </div>
         </div>
@@ -625,8 +640,8 @@
                     <input type="text" id="playerName" class="form-input" placeholder="Character Name" value="">
                 </div>
                 <div class="form-group">
-                    <label>Room Code</label>
-                    <input type="text" id="roomCodeInput" class="form-input" placeholder="XXXX-XXXX" maxlength="9" style="text-transform: uppercase;">
+                    <label>Host ID</label>
+                    <input type="text" id="hostIdInput" class="form-input" placeholder="Enter Host ID">
                 </div>
                 <div class="form-group">
                     <label>Choose Avatar</label>
@@ -698,12 +713,11 @@
         </div>
     </div>
 
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script>
-        // PeerJS for WebRTC peer-to-peer connections
         let peer = null;
         let connections = {};
         let isHost = false;
-        let currentRoom = '';
         let playerName = '';
         let playerAvatar = '🧙‍♂️';
         let currentDice = 4;
@@ -720,46 +734,60 @@
             100: { class: 'd100' }
         };
 
-        // Initialize PeerJS (using free public server)
+        // Initialize PeerJS with multiple server options
         function initializePeer() {
             return new Promise((resolve, reject) => {
-                // Using public PeerJS server (free)
-                peer = new Peer({
-                    host: 'peerjs-server.herokuapp.com',
-                    secure: true,
-                    port: 443,
-                    path: '/',
-                    debug: 2
-                });
+                // Try multiple PeerJS servers
+                const servers = [
+                    { host: '0.peerjs.com', port: 443, path: '/', secure: true },
+                    { /* Use default PeerJS cloud server */ }
+                ];
 
-                peer.on('open', (id) => {
-                    console.log('Peer connected with ID:', id);
-                    resolve(id);
-                });
+                let serverIndex = 0;
 
-                peer.on('error', (error) => {
-                    console.error('Peer error:', error);
-                    // Fallback to different server or local
-                    peer = new Peer();
-                    peer.on('open', resolve);
-                    peer.on('error', reject);
-                });
+                function tryNextServer() {
+                    if (serverIndex >= servers.length) {
+                        reject(new Error('All PeerJS servers failed'));
+                        return;
+                    }
 
-                peer.on('connection', (conn) => {
-                    handleIncomingConnection(conn);
-                });
+                    const config = servers[serverIndex];
+                    console.log('Trying PeerJS server:', config);
+
+                    peer = new Peer(config);
+
+                    const timeout = setTimeout(() => {
+                        if (peer && !peer.disconnected) {
+                            peer.destroy();
+                        }
+                        serverIndex++;
+                        tryNextServer();
+                    }, 10000); // 10 second timeout
+
+                    peer.on('open', (id) => {
+                        clearTimeout(timeout);
+                        console.log('Peer connected with ID:', id);
+                        resolve(id);
+                    });
+
+                    peer.on('error', (error) => {
+                        console.error('Peer error:', error);
+                        clearTimeout(timeout);
+                        if (error.type === 'server-error' || error.type === 'socket-error') {
+                            serverIndex++;
+                            tryNextServer();
+                        } else {
+                            reject(error);
+                        }
+                    });
+
+                    peer.on('connection', (conn) => {
+                        handleIncomingConnection(conn);
+                    });
+                }
+
+                tryNextServer();
             });
-        }
-
-        // Generate room code
-        function generateRoomCode() {
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let result = '';
-            for (let i = 0; i < 8; i++) {
-                if (i === 4) result += '-';
-                result += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            return result;
         }
 
         // Tab switching
@@ -792,401 +820,9 @@
                 playerName = document.getElementById('hostName').value || 'Dungeon Master';
                 isHost = true;
                 
-                await initializePeer();
+                const peerId = await initializePeer();
                 
-                currentRoom = generateRoomCode();
-                document.getElementById('roomCode').textContent = currentRoom;
+                document.getElementById('hostId').textContent = peerId;
                 document.getElementById('roomInfo').style.display = 'block';
                 
-                // Store room mapping
-                if (typeof(Storage) !== "undefined") {
-                    localStorage.setItem('dnd-room-' + currentRoom, peer.id);
-                }
-                
-                connectedPlayers[peer.id] = { name: playerName, avatar: playerAvatar };
-                updatePlayerList();
-                
-                updateStatus('Room created! Share the code with players.', 'connected');
-                showGameArea();
-                
-            } catch (error) {
-                console.error('Error creating room:', error);
-                updateStatus('Failed to create room. Please try again.', 'disconnected');
-            }
-        }
-
-        // Join room (Player)
-        async function joinRoom() {
-            try {
-                const roomCode = document.getElementById('roomCodeInput').value.toUpperCase().trim();
-                const name = document.getElementById('playerName').value.trim();
-                
-                if (!roomCode || !name) {
-                    alert('Please enter both room code and your name!');
-                    return;
-                }
-                
-                updateStatus('Joining room...', 'connecting');
-                
-                playerName = name;
-                currentRoom = roomCode;
-                isHost = false;
-                
-                await initializePeer();
-                
-                // Try to get host ID from localStorage (same browser sessions)
-                let hostId = null;
-                if (typeof(Storage) !== "undefined") {
-                    hostId = localStorage.getItem('dnd-room-' + roomCode);
-                }
-                
-                if (!hostId) {
-                    // If no stored host ID, try a predictable pattern
-                    hostId = 'dnd-' + roomCode.replace('-', '').toLowerCase();
-                }
-                
-                // Connect to host
-                const conn = peer.connect(hostId);
-                
-                conn.on('open', () => {
-                    connections[hostId] = conn;
-                    conn.send({
-                        type: 'join',
-                        player: { name: playerName, avatar: playerAvatar, id: peer.id }
-                    });
-                    updateStatus('Connected to campaign!', 'connected');
-                    showGameArea();
-                });
-                
-                conn.on('error', () => {
-                    updateStatus('Failed to connect. Check room code.', 'disconnected');
-                });
-                
-                conn.on('data', (data) => {
-                    handleMessage(data, hostId);
-                });
-                
-            } catch (error) {
-                console.error('Error joining room:', error);
-                updateStatus('Failed to join room. Please try again.', 'disconnected');
-            }
-        }
-
-        // Handle incoming connections (Host only)
-        function handleIncomingConnection(conn) {
-            if (!isHost) return;
-            
-            conn.on('open', () => {
-                connections[conn.peer] = conn;
-            });
-            
-            conn.on('data', (data) => {
-                handleMessage(data, conn.peer);
-            });
-            
-            conn.on('close', () => {
-                delete connections[conn.peer];
-                delete connectedPlayers[conn.peer];
-                updatePlayerList();
-                broadcastToAll({
-                    type: 'playerLeft',
-                    playerId: conn.peer
-                });
-            });
-        }
-
-        // Handle incoming messages
-        function handleMessage(data, senderId) {
-            switch (data.type) {
-                case 'join':
-                    if (isHost) {
-                        connectedPlayers[senderId] = data.player;
-                        updatePlayerList();
-                        
-                        // Send current player list to new player
-                        connections[senderId].send({
-                            type: 'playerList',
-                            players: connectedPlayers
-                        });
-                        
-                        // Broadcast new player to others
-                        broadcastToAll({
-                            type: 'newPlayer',
-                            player: data.player
-                        }, senderId);
-                        
-                        addToFeed('System', '📢', 0, `${data.player.name} joined the campaign!`, 'system');
-                    }
-                    break;
-                    
-                case 'playerList':
-                    connectedPlayers = data.players;
-                    updatePlayerList();
-                    break;
-                    
-                case 'newPlayer':
-                    connectedPlayers[data.player.id] = data.player;
-                    updatePlayerList();
-                    addToFeed('System', '📢', 0, `${data.player.name} joined the campaign!`, 'system');
-                    break;
-                    
-                case 'playerLeft':
-                    delete connectedPlayers[data.playerId];
-                    updatePlayerList();
-                    break;
-                    
-                case 'roll':
-                    addToFeed(data.player.name, data.player.avatar, data.diceType, data.result, data.rollType);
-                    break;
-            }
-        }
-
-        // Broadcast message to all connected players
-        function broadcastToAll(message, excludeId = null) {
-            Object.keys(connections).forEach(peerId => {
-                if (peerId !== excludeId && connections[peerId]) {
-                    try {
-                        connections[peerId].send(message);
-                    } catch (error) {
-                        console.error('Error sending to', peerId, error);
-                    }
-                }
-            });
-        }
-
-        // Update connection status
-        function updateStatus(message, type) {
-            const status = document.getElementById('connectionStatus');
-            status.textContent = message;
-            status.className = `status ${type}`;
-            status.style.display = 'block';
-        }
-
-        // Show game area
-        function showGameArea() {
-            document.getElementById('gameArea').style.display = 'grid';
-            selectDice(4);
-        }
-
-        // Update connected players list
-        function updatePlayerList() {
-            const playerList = document.getElementById('playerList');
-            playerList.innerHTML = '';
-            
-            Object.values(connectedPlayers).forEach(player => {
-                const playerDiv = document.createElement('div');
-                playerDiv.className = 'connected-player';
-                playerDiv.innerHTML = `<span>${player.avatar}</span><span>${player.name}</span>`;
-                playerList.appendChild(playerDiv);
-            });
-        }
-
-        // Copy room code to clipboard
-        function copyRoomCode() {
-            const roomCode = document.getElementById('roomCode').textContent;
-            navigator.clipboard.writeText(roomCode).then(() => {
-                alert('Room code copied to clipboard!');
-            });
-        }
-
-        // Share room link
-        function shareRoomLink() {
-            const roomCode = document.getElementById('roomCode').textContent;
-            const url = window.location.href.split('?')[0] + '?room=' + roomCode;
-            
-            if (navigator.share) {
-                navigator.share({
-                    title: 'Join D&D Campaign',
-                    text: `Join our D&D campaign! Room code: ${roomCode}`,
-                    url: url
-                });
-            } else {
-                navigator.clipboard.writeText(url).then(() => {
-                    alert('Campaign link copied to clipboard!');
-                });
-            }
-        }
-
-        // Check URL for room code
-        function checkUrlForRoom() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const roomCode = urlParams.get('room');
-            if (roomCode) {
-                switchTab('join');
-                document.getElementById('roomCodeInput').value = roomCode;
-            }
-        }
-
-        // Cryptographically secure random generation
-        function getSecureRandom() {
-            const array = new Uint32Array(1);
-            crypto.getRandomValues(array);
-            return array[0] / (0xFFFFFFFF + 1);
-        }
-
-        function rollDie(sides) {
-            return Math.floor(getSecureRandom() * sides) + 1;
-        }
-
-        // Dice selection
-        function selectDice(sides) {
-            currentDice = sides;
-            
-            document.querySelectorAll('.dice-option').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            document.querySelector(`[data-sides="${sides}"]`).classList.add('active');
-            
-            const dice = document.getElementById('dice');
-            const info = diceInfo[sides];
-            dice.className = `dice-visual ${info.class}`;
-            
-            document.getElementById('rollButton').textContent = `🎲 Roll D${sides} 🎲`;
-            document.getElementById('diceNumber').textContent = '?';
-            document.getElementById('result').textContent = 'Ready to roll!';
-            document.getElementById('result').className = 'result-display';
-        }
-
-        // Roll dice
-        function rollDice() {
-            const button = document.getElementById('rollButton');
-            const dice = document.getElementById('dice');
-            const diceNumber = document.getElementById('diceNumber');
-            const result = document.getElementById('result');
-            
-            button.disabled = true;
-            button.textContent = '🎲 Rolling... 🎲';
-            
-            dice.classList.add('rolling');
-            diceNumber.textContent = '?';
-            result.textContent = 'Rolling...';
-            result.className = 'result-display';
-            
-            setTimeout(() => {
-                const roll = rollDie(currentDice);
-                
-                diceNumber.textContent = roll;
-                result.textContent = roll;
-                
-                // Check for critical rolls
-                let rollType = 'normal';
-                if (currentDice === 20 && roll === 20) {
-                    result.classList.add('critical-success');
-                    result.textContent = `🌟 ${roll} 🌟 CRITICAL!`;
-                    rollType = 'critical';
-                } else if (currentDice === 20 && roll === 1) {
-                    result.classList.add('critical-fail');
-                    result.textContent = `💀 ${roll} 💀 FUMBLE!`;
-                    rollType = 'fumble';
-                } else if (roll === currentDice) {
-                    result.classList.add('critical-success');
-                    rollType = 'critical';
-                } else if (roll === 1 && currentDice > 2) {
-                    result.classList.add('critical-fail');
-                    rollType = 'fumble';
-                }
-                
-                // Add to local feed
-                addToFeed(playerName, playerAvatar, currentDice, roll, rollType);
-                
-                // Broadcast to other players
-                broadcastToAll({
-                    type: 'roll',
-                    player: { name: playerName, avatar: playerAvatar },
-                    diceType: currentDice,
-                    result: roll,
-                    rollType: rollType
-                });
-                
-                dice.classList.remove('rolling');
-                button.disabled = false;
-                button.textContent = `🎲 Roll D${currentDice} 🎲`;
-            }, 2000);
-        }
-
-        // Add roll to feed
-        function addToFeed(playerName, avatar, diceType, roll, rollType = 'normal') {
-            const feed = document.getElementById('rollFeed');
-            const entry = document.createElement('div');
-            
-            let rollText = roll;
-            if (rollType === 'system') {
-                rollText = '';
-            }
-            
-            entry.className = `roll-entry ${rollType}`;
-            entry.innerHTML = `
-                <div class="player-avatar">${avatar}</div>
-                <div class="roll-info">
-                    <div class="player-name">${playerName}</div>
-                    <div class="roll-details">${rollType === 'system' ? roll : `Rolled D${diceType}`}</div>
-                </div>
-                ${rollText ? `<div class="roll-result ${rollType}">${rollText}</div>` : ''}
-                <div class="timestamp">${new Date().toLocaleTimeString()}</div>
-            `;
-            
-            // Insert at the beginning
-            if (feed.children.length > 0) {
-                feed.insertBefore(entry, feed.children[0]);
-            } else {
-                feed.appendChild(entry);
-            }
-            
-            // Keep only last 50 entries
-            while (feed.children.length > 50) {
-                feed.removeChild(feed.lastChild);
-            }
-            
-            // Scroll to top
-            feed.scrollTop = 0;
-        }
-
-        // Dice selection event listeners
-        document.querySelectorAll('.dice-option').forEach(button => {
-            button.addEventListener('click', () => {
-                const sides = parseInt(button.dataset.sides);
-                selectDice(sides);
-            });
-        });
-
-        // Keyboard support
-        document.addEventListener('keydown', (e) => {
-            if (e.code === 'Space' || e.code === 'Enter') {
-                e.preventDefault();
-                const rollButton = document.getElementById('rollButton');
-                if (rollButton && !rollButton.disabled && rollButton.offsetParent !== null) {
-                    rollDice();
-                }
-            }
-        });
-
-        // Auto-format room code input
-        document.getElementById('roomCodeInput').addEventListener('input', (e) => {
-            let value = e.target.value.replace(/[^A-Z0-9]/g, '').toUpperCase();
-            if (value.length > 4) {
-                value = value.slice(0, 4) + '-' + value.slice(4, 8);
-            }
-            e.target.value = value;
-        });
-
-        // Initialize
-        setupAvatarSelection();
-        checkUrlForRoom();
-        selectDice(4);
-
-        // Load PeerJS library
-        if (!window.Peer) {
-            const script = document.createElement('script');
-            script.src = 'https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js';
-            script.onload = () => {
-                console.log('PeerJS loaded successfully');
-            };
-            script.onerror = () => {
-                console.error('Failed to load PeerJS');
-                updateStatus('Failed to load networking library. Please refresh.', 'disconnected');
-            };
-            document.head.appendChild(script);
-        }
-    </script>
-</body>
-</html>
+                connecte
