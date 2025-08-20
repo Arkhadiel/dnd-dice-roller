@@ -1,871 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D&D Party Dice Roller</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap');
-        
-        body {
-            margin: 0;
-            padding: 0;
-            min-height: 100vh;
-            background: radial-gradient(ellipse at center, #2c1810 0%, #1a0f08 100%);
-            font-family: 'Cinzel', serif;
-            color: #d4af37;
-            overflow-x: hidden;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-
-        h1 {
-            font-size: 2.5rem;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-            font-weight: 700;
-            color: #ffd700;
-            margin-bottom: 1rem;
-        }
-
-        .connection-section {
-            background: rgba(139, 69, 19, 0.3);
-            border: 2px solid #d4af37;
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 2rem;
-            max-width: 800px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            justify-content: center;
-        }
-
-        .tab {
-            background: linear-gradient(145deg, #8b4513, #654321);
-            border: 2px solid #d4af37;
-            border-radius: 10px;
-            padding: 10px 20px;
-            font-family: 'Cinzel', serif;
-            font-weight: 600;
-            color: #ffd700;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .tab.active {
-            background: linear-gradient(145deg, #d4af37, #b8860b);
-            border-color: #ffd700;
-            color: #2c1810;
-        }
-
-        .tab-content {
-            display: none;
-            text-align: center;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .setup-form {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .form-group label {
-            font-weight: 600;
-            margin-bottom: 5px;
-            font-size: 0.9rem;
-        }
-
-        .form-input {
-            background: linear-gradient(145deg, #8b4513, #654321);
-            border: 2px solid #d4af37;
-            border-radius: 8px;
-            padding: 8px 12px;
-            font-family: 'Cinzel', serif;
-            font-weight: 600;
-            color: #ffd700;
-            text-align: center;
-            font-size: 1rem;
-            min-width: 120px;
-        }
-
-        .form-input:focus {
-            outline: none;
-            border-color: #ffd700;
-            box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
-        }
-
-        .avatar-selector {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
-        .avatar-option {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            border: 3px solid #d4af37;
-            background: linear-gradient(145deg, #8b4513, #a0522d);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .avatar-option:hover, .avatar-option.selected {
-            border-color: #ffd700;
-            box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
-            transform: scale(1.1);
-        }
-
-        .room-code {
-            background: linear-gradient(145deg, #654321, #2c1810);
-            border: 2px solid #ffd700;
-            border-radius: 10px;
-            padding: 15px;
-            font-family: 'Courier New', monospace;
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #ffd700;
-            text-align: center;
-            margin: 15px 0;
-            user-select: all;
-        }
-
-        .peer-id {
-            background: linear-gradient(145deg, #654321, #2c1810);
-            border: 2px solid #d4af37;
-            border-radius: 10px;
-            padding: 10px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9rem;
-            color: #d4af37;
-            text-align: center;
-            margin: 10px 0;
-            word-break: break-all;
-            user-select: all;
-        }
-
-        .action-button {
-            background: linear-gradient(145deg, #d4af37, #b8860b);
-            border: 3px solid #ffd700;
-            border-radius: 12px;
-            padding: 12px 25px;
-            font-size: 1rem;
-            font-family: 'Cinzel', serif;
-            font-weight: 600;
-            color: #2c1810;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin: 5px;
-        }
-
-        .action-button:hover {
-            background: linear-gradient(145deg, #ffd700, #d4af37);
-            transform: translateY(-2px);
-        }
-
-        .action-button:disabled {
-            background: #666;
-            border-color: #888;
-            color: #ccc;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .status {
-            padding: 10px;
-            border-radius: 8px;
-            margin: 10px 0;
-            font-weight: 600;
-            text-align: center;
-        }
-
-        .status.connected {
-            background: rgba(0, 255, 0, 0.2);
-            border: 1px solid #00ff00;
-            color: #00ff00;
-        }
-
-        .status.disconnected {
-            background: rgba(255, 0, 0, 0.2);
-            border: 1px solid #ff0000;
-            color: #ff0000;
-        }
-
-        .status.connecting {
-            background: rgba(255, 255, 0, 0.2);
-            border: 1px solid #ffff00;
-            color: #ffff00;
-        }
-
-        .main-content {
-            display: grid;
-            grid-template-columns: 1fr 400px;
-            gap: 2rem;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .dice-section {
-            background: rgba(139, 69, 19, 0.2);
-            border: 2px solid #d4af37;
-            border-radius: 15px;
-            padding: 20px;
-        }
-
-        .dice-controls {
-            margin-bottom: 2rem;
-        }
-
-        .dice-selector {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            justify-content: center;
-            margin-bottom: 1rem;
-        }
-
-        .multi-dice-controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            justify-content: center;
-            align-items: center;
-            margin-bottom: 1rem;
-            padding: 15px;
-            background: rgba(139, 69, 19, 0.3);
-            border-radius: 10px;
-        }
-
-        .multi-dice-input {
-            background: linear-gradient(145deg, #8b4513, #654321);
-            border: 2px solid #d4af37;
-            border-radius: 8px;
-            padding: 8px 12px;
-            font-family: 'Cinzel', serif;
-            font-weight: 600;
-            color: #ffd700;
-            text-align: center;
-            font-size: 1rem;
-            width: 60px;
-        }
-
-        .multi-dice-input:focus {
-            outline: none;
-            border-color: #ffd700;
-            box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
-        }
-
-        .group-roll-section {
-            background: rgba(139, 69, 19, 0.3);
-            border: 2px solid #d4af37;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 1rem;
-            text-align: center;
-        }
-
-        .group-roll-button {
-            background: linear-gradient(145deg, #8b4513, #654321);
-            border: 2px solid #d4af37;
-            border-radius: 10px;
-            padding: 10px 20px;
-            font-family: 'Cinzel', serif;
-            font-weight: 600;
-            color: #ffd700;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin: 5px;
-        }
-
-        .group-roll-button:hover {
-            background: linear-gradient(145deg, #a0522d, #8b4513);
-            border-color: #ffd700;
-        }
-
-        .group-roll-button.active {
-            background: linear-gradient(145deg, #d4af37, #b8860b);
-            border-color: #ffd700;
-            color: #2c1810;
-        }
-
-        .initiative-tracker {
-            background: rgba(139, 69, 19, 0.2);
-            border: 2px solid #d4af37;
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 1rem;
-        }
-
-        .initiative-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .initiative-title {
-            font-size: 1.3rem;
-            font-weight: 700;
-            color: #ffd700;
-        }
-
-        .initiative-list {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .initiative-entry {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: rgba(139, 69, 19, 0.4);
-            border: 1px solid #d4af37;
-            border-radius: 8px;
-            padding: 10px;
-            margin-bottom: 8px;
-            transition: all 0.3s ease;
-        }
-
-        .initiative-entry.current-turn {
-            border-color: #ffd700;
-            box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
-            background: rgba(255, 215, 0, 0.1);
-        }
-
-        .initiative-order {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #ffd700;
-            min-width: 30px;
-            text-align: center;
-        }
-
-        .initiative-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: linear-gradient(145deg, #8b4513, #a0522d);
-            border: 2px solid #d4af37;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-        }
-
-        .initiative-info {
-            flex-grow: 1;
-        }
-
-        .initiative-name {
-            font-weight: 600;
-            color: #ffd700;
-        }
-
-        .initiative-roll {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #d4af37;
-            min-width: 50px;
-            text-align: center;
-        }
-
-        .roll-results {
-            margin: 10px 0;
-            font-size: 0.9rem;
-            color: #d4af37;
-        }
-
-        .multi-roll-result {
-            display: inline-block;
-            background: rgba(139, 69, 19, 0.4);
-            border: 1px solid #d4af37;
-            border-radius: 5px;
-            padding: 2px 6px;
-            margin: 2px;
-            font-weight: bold;
-        }
-
-        .multi-roll-total {
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: #ffd700;
-            margin-left: 10px;
-        }
-
-        .dice-option {
-            background: linear-gradient(145deg, #8b4513, #654321);
-            border: 2px solid #d4af37;
-            border-radius: 10px;
-            padding: 10px 15px;
-            font-family: 'Cinzel', serif;
-            font-weight: 600;
-            color: #ffd700;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 1rem;
-            min-width: 60px;
-        }
-
-        .dice-option:hover {
-            background: linear-gradient(145deg, #a0522d, #8b4513);
-            border-color: #ffd700;
-            transform: translateY(-2px);
-        }
-
-        .dice-option.active {
-            background: linear-gradient(145deg, #d4af37, #b8860b);
-            border-color: #ffd700;
-            color: #2c1810;
-            box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
-        }
-
-        .dice-container {
-            text-align: center;
-            margin: 2rem 0;
-        }
-
-        .dice-visual {
-            width: 100px;
-            height: 100px;
-            background: linear-gradient(145deg, #8b4513, #a0522d);
-            border: 3px solid #ffd700;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.8rem;
-            font-weight: bold;
-            color: #ffd700;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
-            margin: 0 auto 20px;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .d2 { border-radius: 50%; }
-        .d4 { 
-            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
-            width: 80px;
-            height: 80px;
-            font-size: 1.3rem;
-        }
-        .d6 { border-radius: 12px; }
-        .d8 { 
-            clip-path: polygon(50% 0%, 0% 50%, 50% 100%, 100% 50%);
-            transform: rotate(45deg);
-            font-size: 1.3rem;
-        }
-        .d8 .dice-number { transform: rotate(-45deg); }
-        .d10 { 
-            clip-path: polygon(50% 0%, 100% 25%, 82% 100%, 18% 100%, 0% 25%);
-            font-size: 1.3rem;
-        }
-        .d12 { 
-            clip-path: polygon(50% 0%, 100% 25%, 82% 100%, 18% 100%, 0% 25%);
-            font-size: 1.3rem;
-        }
-        .d20 { 
-            border-radius: 16px;
-            background: linear-gradient(145deg, #8b4513, #a0522d, #654321);
-        }
-        .d100 { 
-            border-radius: 8px;
-            font-size: 1rem;
-        }
-
-        .dice-visual.rolling {
-            animation: spin 2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        }
-
-        @keyframes spin {
-            0% { transform: rotateY(0deg) rotateX(0deg) scale(1); }
-            25% { transform: rotateY(180deg) rotateX(90deg) scale(1.1); }
-            50% { transform: rotateY(360deg) rotateX(180deg) scale(1); }
-            75% { transform: rotateY(540deg) rotateX(270deg) scale(1.1); }
-            100% { transform: rotateY(720deg) rotateX(360deg) scale(1); }
-        }
-
-        .result-display {
-            font-size: 2rem;
-            font-weight: 700;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-            margin: 1rem 0;
-            min-height: 3rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .result-display.critical-success {
-            color: #00ff00;
-            text-shadow: 0 0 20px #00ff00;
-            animation: glow 1s ease-in-out infinite alternate;
-        }
-
-        .result-display.critical-fail {
-            color: #ff0000;
-            text-shadow: 0 0 20px #ff0000;
-            animation: glow 1s ease-in-out infinite alternate;
-        }
-
-        @keyframes glow {
-            from { text-shadow: 0 0 20px currentColor; }
-            to { text-shadow: 0 0 30px currentColor, 0 0 40px currentColor; }
-        }
-
-        .roll-button {
-            background: linear-gradient(145deg, #d4af37, #b8860b);
-            border: 3px solid #ffd700;
-            border-radius: 12px;
-            padding: 12px 25px;
-            font-size: 1.1rem;
-            font-family: 'Cinzel', serif;
-            font-weight: 600;
-            color: #2c1810;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            width: 100%;
-        }
-
-        .roll-button:hover {
-            background: linear-gradient(145deg, #ffd700, #d4af37);
-            transform: translateY(-2px);
-        }
-
-        .roll-button:disabled {
-            background: #666;
-            border-color: #888;
-            color: #ccc;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .party-feed {
-            background: rgba(139, 69, 19, 0.2);
-            border: 2px solid #d4af37;
-            border-radius: 15px;
-            padding: 20px;
-            height: 70vh;
-            overflow-y: auto;
-        }
-
-        .feed-header {
-            text-align: center;
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #ffd700;
-            margin-bottom: 1rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid #d4af37;
-        }
-
-        .connected-players {
-            background: rgba(139, 69, 19, 0.3);
-            border-radius: 8px;
-            padding: 10px;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-
-        .player-list {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-top: 10px;
-        }
-
-        .connected-player {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            background: rgba(139, 69, 19, 0.4);
-            border: 1px solid #d4af37;
-            border-radius: 20px;
-            padding: 5px 10px;
-            font-size: 0.9rem;
-        }
-
-        .roll-entry {
-            background: rgba(139, 69, 19, 0.4);
-            border: 1px solid #d4af37;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            animation: slideIn 0.5s ease-out;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .roll-entry.critical {
-            border-color: #00ff00;
-            box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
-        }
-
-        .roll-entry.fumble {
-            border-color: #ff0000;
-            box-shadow: 0 0 15px rgba(255, 0, 0, 0.3);
-        }
-
-        @keyframes slideIn {
-            from { 
-                opacity: 0;
-                transform: translateX(100px);
-            }
-            to { 
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        .player-avatar {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: linear-gradient(145deg, #8b4513, #a0522d);
-            border: 2px solid #d4af37;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            flex-shrink: 0;
-        }
-
-        .roll-info {
-            flex-grow: 1;
-        }
-
-        .player-name {
-            font-weight: 700;
-            color: #ffd700;
-            font-size: 1rem;
-            margin-bottom: 3px;
-        }
-
-        .roll-details {
-            color: #d4af37;
-            font-size: 0.9rem;
-            opacity: 0.9;
-        }
-
-        .roll-result {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #ffd700;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-            flex-shrink: 0;
-            min-width: 60px;
-            text-align: center;
-        }
-
-        .roll-result.critical {
-            color: #00ff00;
-            text-shadow: 0 0 15px #00ff00;
-        }
-
-        .roll-result.fumble {
-            color: #ff0000;
-            text-shadow: 0 0 15px #ff0000;
-        }
-
-        .timestamp {
-            position: absolute;
-            top: 5px;
-            right: 10px;
-            font-size: 0.7rem;
-            color: #d4af37;
-            opacity: 0.6;
-        }
-
-        .instructions {
-            background: rgba(255, 215, 0, 0.1);
-            border: 1px solid #ffd700;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 15px 0;
-            font-size: 0.9rem;
-        }
-
-        .background-pattern {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0.05;
-            background-image: 
-                radial-gradient(circle at 25% 25%, #ffd700 2px, transparent 2px),
-                radial-gradient(circle at 75% 75%, #ffd700 1px, transparent 1px);
-            background-size: 100px 100px;
-            z-index: -1;
-        }
-
-        .debug-info {
-            position: fixed;
-            bottom: 10px;
-            left: 10px;
-            background: rgba(0,0,0,0.8);
-            color: #fff;
-            padding: 10px;
-            border-radius: 5px;
-            font-family: monospace;
-            font-size: 0.8rem;
-            display: none;
-        }
-
-        @media (max-width: 1200px) {
-            .main-content {
-                grid-template-columns: 1fr;
-                gap: 1rem;
-            }
-            
-            .party-feed {
-                height: 50vh;
-            }
-        }
-
-        @media (max-width: 600px) {
-            h1 { font-size: 2rem; }
-            .setup-form { flex-direction: column; }
-            .avatar-selector { justify-content: center; }
-            .dice-selector { gap: 5px; }
-            .roll-entry { flex-direction: column; text-align: center; }
-            .tabs { flex-direction: column; }
-        }
-    </style>
-</head>
-<body>
-    <div class="background-pattern"></div>
-    
-    <div class="header">
-        <h1>⚔️ D&D Party Dice Roller ⚔️</h1>
-    </div>
-
-    <div class="connection-section">
-        <div class="tabs">
-            <button class="tab active" onclick="switchTab('host')">🏰 Host Room</button>
-            <button class="tab" onclick="switchTab('join')">⚔️ Join Room</button>
-        </div>
-
-        <div id="hostTab" class="tab-content active">
-            <h3>Host a New Campaign</h3>
-            <div class="setup-form">
-                <div class="form-group">
-                    <label>Your Name</label>
-                    <input type="text" id="hostName" class="form-input" placeholder="DM Name" value="Dungeon Master">
-                </div>
-                <div class="form-group">
-                    <label>Choose Avatar</label>
-                    <div class="avatar-selector">
-                        <div class="avatar-option selected" data-avatar="🧙‍♂️">🧙‍♂️</div>
-                        <div class="avatar-option" data-avatar="👑">👑</div>
-                        <div class="avatar-option" data-avatar="🐉">🐉</div>
-                        <div class="avatar-option" data-avatar="📜">📜</div>
-                        <div class="avatar-option" data-avatar="⚔️">⚔️</div>
-                        <div class="avatar-option" data-avatar="🛡️">🛡️</div>
-                        <div class="avatar-option" data-avatar="🏹">🏹</div>
-                        <div class="avatar-option" data-avatar="🔮">🔮</div>
-                    </div>
-                </div>
-            </div>
-            <button class="action-button" onclick="createRoom()">🏰 Create Campaign Room</button>
-            
-            <div id="roomInfo" style="display: none;">
-                <div class="instructions">
-                    <strong>🎯 Share this Host ID with your players:</strong><br>
-                    <small>Players need to enter this exact ID to connect</small>
-                </div>
-                <div class="peer-id" id="hostId">Generating...</div>
-                <button class="action-button" onclick="copyHostId()">📋 Copy Host ID</button>
-                <button class="action-button" onclick="shareRoomLink()">🔗 Share Link</button>
-            </div>
-        </div>
-
-        <div id="joinTab" class="tab-content">
-            <h3>Join Campaign</h3>
-            <div class="setup-form">
-                <div class="form-group">
-                    <label>Your Name</label>
-                    <input type="text" id="playerName" class="form-input" placeholder="Character Name" value="">
-                </div>
-                <div class="form-group">
-                    <label>Host ID</label>
-                    <input type="text" id="hostIdInput" class="form-input" placeholder="Enter Host ID">
-                </div>
-                <div class="form-group">
-                    <label>Choose Avatar</label>
-                    <div class="avatar-selector" id="playerAvatars">
-                        <div class="avatar-option selected" data-avatar="⚔️">⚔️</div>
-                        <div class="avatar-option" data-avatar="🏹">🏹</div>
-                        <div class="avatar-option" data-avatar="🛡️">🛡️</div>
-                        <div class="avatar-option" data-avatar="🔥">🔥</div>
-                        <div class="avatar-option" data-avatar="❄️">❄️</div>
-                        <div class="avatar-option" data-avatar="⚡">⚡</div>
-                        <div class="avatar-option" data-avatar="🌟">🌟</div>
-                        <div class="avatar-option" data-avatar="🦄">🦄</div>
-                    </div>
-                </div>
-            </div>
-            <button class="action-button" onclick="joinRoom()">⚔️ Join Campaign</button>
-        </div>
-
-        <div id="connectionStatus" class="status" style="display: none;"></div>
-    </div>
-
-    <div class="main-content" id="gameArea" style="display: none;">
-        <div class="dice-section">
-            <!-- Initiative Tracker (Host Only) -->
-            <div class="initiative-tracker" id="initiativeTracker" style="display: none;">
-                <div class="initiative-header">
-                    <div class="initiative-title">⚡ Initiative Order ⚡</div>
-                    <div>
-                        <button class="action-button" onclick="nextTurn()">▶️ Next Turn</button>
-                    </div>
-                </div>
-                <div class="initiative-list" id="initiativeList">
-                    <div style="text-align: center; color: #d4af37; padding: 20px;">
-                        Click "Roll Initiative" to start combat!
-                    </div>
-                </div>
-            </div>
-
-            <!-- Group Rolls (Host Only) -->
+<!-- Group Rolls (Host Only) -->
             <div class="group-roll-section" id="groupRollSection" style="display: none;">
                 <h4>🎯 Group Rolls (DM Only)</h4>
                 <div style="margin-bottom: 10px;">
@@ -1412,6 +545,18 @@
                     }
                     break;
                     
+                case 'groupRollResponse':
+                    if (isHost && data.player && typeof data.result === 'number') {
+                        addToFeed(
+                            data.player.name || 'Unknown Player',
+                            data.player.avatar || '🎲',
+                            data.diceType || 20,
+                            data.result,
+                            'group-roll-response'
+                        );
+                    }
+                    break;
+                    
                 case 'initiativeRoll':
                     if (data.player && typeof data.roll === 'number') {
                         addInitiativeRoll(data.player, data.roll);
@@ -1501,7 +646,7 @@
                     playerDiv.className = 'connected-player';
                     const name = player.name || 'Unknown';
                     const avatar = player.avatar || '🎲';
-                    playerDiv.innerHTML = `<span>${avatar}</span><span>${name}</span>`;
+                    playerDiv.innerHTML = `<span>${avatar}</span><span>${name}${player.isHost ? ' (DM)' : ''}</span>`;
                     playerList.appendChild(playerDiv);
                 }
             });
@@ -1800,6 +945,12 @@
                 rollName = prompt('Enter roll name:') || 'Custom Roll';
                 const customDice = prompt('Enter dice type (4, 6, 8, 10, 12, 20, 100):', '20');
                 diceToRoll = parseInt(customDice) || 20;
+                
+                // Validate dice type
+                if (![4, 6, 8, 10, 12, 20, 100].includes(diceToRoll)) {
+                    alert('Invalid dice type! Using D20 instead.');
+                    diceToRoll = 20;
+                }
             }
             
             debugLog('Requesting group roll', { rollType: rollName, dice: diceToRoll });
@@ -1817,7 +968,10 @@
         function handleGroupRollRequest(rollType, customDice = 20) {
             if (isHost) return; // Host doesn't roll for their own requests
             
-            pendingGroupRoll = rollType;
+            pendingGroupRoll = {
+                type: rollType,
+                dice: customDice
+            };
             
             // Set appropriate dice
             selectDice(customDice);
@@ -1828,9 +982,13 @@
             diceCount = 1;
             diceModifier = 0;
             rollAdvantage = 'normal';
+            
+            const advantageText = document.getElementById('advantageText');
+            if (advantageText) advantageText.textContent = 'Normal';
+            
             updateRollButton();
             
-            addToFeed('System', '🎯', 0, `Roll requested: ${rollType}! Click roll to respond.`, 'system');
+            addToFeed('System', '🎯', 0, `${rollType} roll requested! Click roll to respond.`, 'system');
             
             // Flash the roll button
             const rollButton = document.getElementById('rollButton');
@@ -1843,8 +1001,23 @@
         }
 
         function sendGroupRollResponse(result, rollType) {
-            // This is handled automatically when broadcasting the roll
-            // The roll will show up in the feed with the player's result
+            if (!pendingGroupRoll) return;
+            
+            // Send group roll response back to host
+            const responseData = {
+                type: 'groupRollResponse',
+                player: {
+                    name: playerName || 'Unknown Player',
+                    avatar: playerAvatar || '🎲'
+                },
+                rollType: pendingGroupRoll.type,
+                diceType: pendingGroupRoll.dice,
+                result: result,
+                rollResult: rollType
+            };
+            
+            debugLog('Sending group roll response', responseData);
+            broadcastToAll(responseData);
         }
 
         // Initiative Functions
@@ -1865,10 +1038,18 @@
                     roll: roll,
                     id: player.id
                 });
+                
+                // Add to feed
+                addToFeed(player.name, player.avatar, 20, roll, 'normal', [roll], 0, 1, 'normal');
             });
             
-            // Sort by initiative (highest first)
-            initiativeOrder.sort((a, b) => b.roll - a.roll);
+            // Sort by initiative (highest first, then by name for ties)
+            initiativeOrder.sort((a, b) => {
+                if (b.roll !== a.roll) {
+                    return b.roll - a.roll;
+                }
+                return a.name.localeCompare(b.name);
+            });
             
             // Broadcast initiative order to all players
             broadcastToAll({
@@ -1878,7 +1059,7 @@
             });
             
             updateInitiativeDisplay();
-            addToFeed('System', '⚡', 0, 'Initiative rolled! Combat begins!', 'system');
+            addToFeed('System', '⚡', 0, `Initiative rolled! ${initiativeOrder[0]?.name || 'Unknown'} goes first!`, 'system');
         }
 
         function addInitiativeRoll(player, roll) {
@@ -1897,12 +1078,27 @@
             }
             
             // Re-sort
-            initiativeOrder.sort((a, b) => b.roll - a.roll);
+            initiativeOrder.sort((a, b) => {
+                if (b.roll !== a.roll) {
+                    return b.roll - a.roll;
+                }
+                return a.name.localeCompare(b.name);
+            });
+            
             updateInitiativeDisplay();
+            
+            // Broadcast updated initiative
+            if (isHost) {
+                broadcastToAll({
+                    type: 'initiativeUpdate',
+                    initiativeOrder: initiativeOrder,
+                    currentTurn: currentTurn
+                });
+            }
         }
 
         function nextTurn() {
-            if (!isHost) return;
+            if (!isHost || initiativeOrder.length === 0) return;
             
             currentTurn = (currentTurn + 1) % initiativeOrder.length;
             
@@ -1916,7 +1112,8 @@
             updateInitiativeDisplay();
             
             if (initiativeOrder[currentTurn]) {
-                addToFeed('System', '▶️', 0, `${initiativeOrder[currentTurn].name}'s turn!`, 'system');
+                const currentPlayer = initiativeOrder[currentTurn];
+                addToFeed('System', '▶️', 0, `${currentPlayer.name}'s turn! (Initiative: ${currentPlayer.roll})`, 'system');
             }
         }
 
@@ -1983,10 +1180,16 @@
             if (rollType === 'system') {
                 rollText = '';
                 rollDetails = roll || 'System message';
+            } else if (rollType === 'group-roll-response') {
+                rollDetails = `Group Roll Response: ${pendingGroupRoll?.type || 'Unknown'}`;
             } else {
                 // Create roll details
                 if (rolls && rolls.length > 1) {
-                    rollDetails = `Rolled ${rolls.length}D${diceType || '?'}: [${rolls.join(', ')}]`;
+                    if (advantage !== 'normal') {
+                        rollDetails = `Rolled 2D${diceType || '?'} (${advantage}): [${rolls.join(', ')}] → ${advantage === 'advantage' ? Math.max(...rolls) : Math.min(...rolls)}`;
+                    } else {
+                        rollDetails = `Rolled ${rolls.length}D${diceType || '?'}: [${rolls.join(', ')}]`;
+                    }
                     if (modifier !== 0) {
                         rollDetails += ` ${modifier >= 0 ? '+' : ''}${modifier}`;
                     }
@@ -2000,10 +1203,6 @@
                     if (modifier !== 0) {
                         rollDetails += ` ${modifier >= 0 ? '+' : ''}${modifier}`;
                     }
-                }
-                
-                if (advantage !== 'normal') {
-                    rollDetails += ` (${advantage === 'advantage' ? 'Advantage' : 'Disadvantage'})`;
                 }
             }
             
@@ -2102,6 +1301,873 @@
         debugLog('Script loaded successfully');
     </script>
 </body>
-</html>" onclick="rollInitiative()">🎲 Roll Initiative</button>
-                        <button class="action-button" onclick="clearInitiative()">🔄 Clear</button>
-                        <button class="action-button
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D&D Party Dice Roller</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap');
+        
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            background: radial-gradient(ellipse at center, #2c1810 0%, #1a0f08 100%);
+            font-family: 'Cinzel', serif;
+            color: #d4af37;
+            overflow-x: hidden;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            font-weight: 700;
+            color: #ffd700;
+            margin-bottom: 1rem;
+        }
+
+        .connection-section {
+            background: rgba(139, 69, 19, 0.3);
+            border: 2px solid #d4af37;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 2rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+
+        .tab {
+            background: linear-gradient(145deg, #8b4513, #654321);
+            border: 2px solid #d4af37;
+            border-radius: 10px;
+            padding: 10px 20px;
+            font-family: 'Cinzel', serif;
+            font-weight: 600;
+            color: #ffd700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            background: linear-gradient(145deg, #d4af37, #b8860b);
+            border-color: #ffd700;
+            color: #2c1810;
+        }
+
+        .tab-content {
+            display: none;
+            text-align: center;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .setup-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        .form-input {
+            background: linear-gradient(145deg, #8b4513, #654321);
+            border: 2px solid #d4af37;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-family: 'Cinzel', serif;
+            font-weight: 600;
+            color: #ffd700;
+            text-align: center;
+            font-size: 1rem;
+            min-width: 120px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #ffd700;
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+        }
+
+        .avatar-selector {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .avatar-option {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 3px solid #d4af37;
+            background: linear-gradient(145deg, #8b4513, #a0522d);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .avatar-option:hover, .avatar-option.selected {
+            border-color: #ffd700;
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
+            transform: scale(1.1);
+        }
+
+        .room-code {
+            background: linear-gradient(145deg, #654321, #2c1810);
+            border: 2px solid #ffd700;
+            border-radius: 10px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ffd700;
+            text-align: center;
+            margin: 15px 0;
+            user-select: all;
+        }
+
+        .peer-id {
+            background: linear-gradient(145deg, #654321, #2c1810);
+            border: 2px solid #d4af37;
+            border-radius: 10px;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #d4af37;
+            text-align: center;
+            margin: 10px 0;
+            word-break: break-all;
+            user-select: all;
+        }
+
+        .action-button {
+            background: linear-gradient(145deg, #d4af37, #b8860b);
+            border: 3px solid #ffd700;
+            border-radius: 12px;
+            padding: 12px 25px;
+            font-size: 1rem;
+            font-family: 'Cinzel', serif;
+            font-weight: 600;
+            color: #2c1810;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 5px;
+        }
+
+        .action-button:hover {
+            background: linear-gradient(145deg, #ffd700, #d4af37);
+            transform: translateY(-2px);
+        }
+
+        .action-button:disabled {
+            background: #666;
+            border-color: #888;
+            color: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .status.connected {
+            background: rgba(0, 255, 0, 0.2);
+            border: 1px solid #00ff00;
+            color: #00ff00;
+        }
+
+        .status.disconnected {
+            background: rgba(255, 0, 0, 0.2);
+            border: 1px solid #ff0000;
+            color: #ff0000;
+        }
+
+        .status.connecting {
+            background: rgba(255, 255, 0, 0.2);
+            border: 1px solid #ffff00;
+            color: #ffff00;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .dice-section {
+            background: rgba(139, 69, 19, 0.2);
+            border: 2px solid #d4af37;
+            border-radius: 15px;
+            padding: 20px;
+        }
+
+        .dice-controls {
+            margin-bottom: 2rem;
+        }
+
+        .dice-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+
+        .multi-dice-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding: 15px;
+            background: rgba(139, 69, 19, 0.3);
+            border-radius: 10px;
+        }
+
+        .multi-dice-input {
+            background: linear-gradient(145deg, #8b4513, #654321);
+            border: 2px solid #d4af37;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-family: 'Cinzel', serif;
+            font-weight: 600;
+            color: #ffd700;
+            text-align: center;
+            font-size: 1rem;
+            width: 60px;
+        }
+
+        .multi-dice-input:focus {
+            outline: none;
+            border-color: #ffd700;
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+        }
+
+        .group-roll-section {
+            background: rgba(139, 69, 19, 0.3);
+            border: 2px solid #d4af37;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .group-roll-button {
+            background: linear-gradient(145deg, #8b4513, #654321);
+            border: 2px solid #d4af37;
+            border-radius: 10px;
+            padding: 10px 20px;
+            font-family: 'Cinzel', serif;
+            font-weight: 600;
+            color: #ffd700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .group-roll-button:hover {
+            background: linear-gradient(145deg, #a0522d, #8b4513);
+            border-color: #ffd700;
+        }
+
+        .group-roll-button.active {
+            background: linear-gradient(145deg, #d4af37, #b8860b);
+            border-color: #ffd700;
+            color: #2c1810;
+        }
+
+        .initiative-tracker {
+            background: rgba(139, 69, 19, 0.2);
+            border: 2px solid #d4af37;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 1rem;
+        }
+
+        .initiative-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .initiative-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #ffd700;
+        }
+
+        .initiative-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .initiative-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .initiative-entry {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(139, 69, 19, 0.4);
+            border: 1px solid #d4af37;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .initiative-entry.current-turn {
+            border-color: #ffd700;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+            background: rgba(255, 215, 0, 0.1);
+        }
+
+        .initiative-order {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ffd700;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .initiative-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #8b4513, #a0522d);
+            border: 2px solid #d4af37;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .initiative-info {
+            flex-grow: 1;
+        }
+
+        .initiative-name {
+            font-weight: 600;
+            color: #ffd700;
+        }
+
+        .initiative-roll {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #d4af37;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .roll-results {
+            margin: 10px 0;
+            font-size: 0.9rem;
+            color: #d4af37;
+        }
+
+        .multi-roll-result {
+            display: inline-block;
+            background: rgba(139, 69, 19, 0.4);
+            border: 1px solid #d4af37;
+            border-radius: 5px;
+            padding: 2px 6px;
+            margin: 2px;
+            font-weight: bold;
+        }
+
+        .multi-roll-total {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #ffd700;
+            margin-left: 10px;
+        }
+
+        .dice-option {
+            background: linear-gradient(145deg, #8b4513, #654321);
+            border: 2px solid #d4af37;
+            border-radius: 10px;
+            padding: 10px 15px;
+            font-family: 'Cinzel', serif;
+            font-weight: 600;
+            color: #ffd700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            min-width: 60px;
+        }
+
+        .dice-option:hover {
+            background: linear-gradient(145deg, #a0522d, #8b4513);
+            border-color: #ffd700;
+            transform: translateY(-2px);
+        }
+
+        .dice-option.active {
+            background: linear-gradient(145deg, #d4af37, #b8860b);
+            border-color: #ffd700;
+            color: #2c1810;
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
+        }
+
+        .dice-container {
+            text-align: center;
+            margin: 2rem 0;
+        }
+
+        .dice-visual {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(145deg, #8b4513, #a0522d);
+            border: 3px solid #ffd700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #ffd700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            margin: 0 auto 20px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .d2 { border-radius: 50%; }
+        .d4 { 
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+            width: 80px;
+            height: 80px;
+            font-size: 1.3rem;
+        }
+        .d6 { border-radius: 12px; }
+        .d8 { 
+            clip-path: polygon(50% 0%, 0% 50%, 50% 100%, 100% 50%);
+            transform: rotate(45deg);
+            font-size: 1.3rem;
+        }
+        .d8 .dice-number { transform: rotate(-45deg); }
+        .d10 { 
+            clip-path: polygon(50% 0%, 100% 25%, 82% 100%, 18% 100%, 0% 25%);
+            font-size: 1.3rem;
+        }
+        .d12 { 
+            clip-path: polygon(50% 0%, 100% 25%, 82% 100%, 18% 100%, 0% 25%);
+            font-size: 1.3rem;
+        }
+        .d20 { 
+            border-radius: 16px;
+            background: linear-gradient(145deg, #8b4513, #a0522d, #654321);
+        }
+        .d100 { 
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .dice-visual.rolling {
+            animation: spin 2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        @keyframes spin {
+            0% { transform: rotateY(0deg) rotateX(0deg) scale(1); }
+            25% { transform: rotateY(180deg) rotateX(90deg) scale(1.1); }
+            50% { transform: rotateY(360deg) rotateX(180deg) scale(1); }
+            75% { transform: rotateY(540deg) rotateX(270deg) scale(1.1); }
+            100% { transform: rotateY(720deg) rotateX(360deg) scale(1); }
+        }
+
+        .result-display {
+            font-size: 2rem;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            margin: 1rem 0;
+            min-height: 3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .result-display.critical-success {
+            color: #00ff00;
+            text-shadow: 0 0 20px #00ff00;
+            animation: glow 1s ease-in-out infinite alternate;
+        }
+
+        .result-display.critical-fail {
+            color: #ff0000;
+            text-shadow: 0 0 20px #ff0000;
+            animation: glow 1s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { text-shadow: 0 0 20px currentColor; }
+            to { text-shadow: 0 0 30px currentColor, 0 0 40px currentColor; }
+        }
+
+        .roll-button {
+            background: linear-gradient(145deg, #d4af37, #b8860b);
+            border: 3px solid #ffd700;
+            border-radius: 12px;
+            padding: 12px 25px;
+            font-size: 1.1rem;
+            font-family: 'Cinzel', serif;
+            font-weight: 600;
+            color: #2c1810;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            width: 100%;
+        }
+
+        .roll-button:hover {
+            background: linear-gradient(145deg, #ffd700, #d4af37);
+            transform: translateY(-2px);
+        }
+
+        .roll-button:disabled {
+            background: #666;
+            border-color: #888;
+            color: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .party-feed {
+            background: rgba(139, 69, 19, 0.2);
+            border: 2px solid #d4af37;
+            border-radius: 15px;
+            padding: 20px;
+            height: 70vh;
+            overflow-y: auto;
+        }
+
+        .feed-header {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #ffd700;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #d4af37;
+        }
+
+        .connected-players {
+            background: rgba(139, 69, 19, 0.3);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .player-list {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .connected-player {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(139, 69, 19, 0.4);
+            border: 1px solid #d4af37;
+            border-radius: 20px;
+            padding: 5px 10px;
+            font-size: 0.9rem;
+        }
+
+        .roll-entry {
+            background: rgba(139, 69, 19, 0.4);
+            border: 1px solid #d4af37;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            animation: slideIn 0.5s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .roll-entry.critical {
+            border-color: #00ff00;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+        }
+
+        .roll-entry.fumble {
+            border-color: #ff0000;
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.3);
+        }
+
+        .roll-entry.system {
+            border-color: #d4af37;
+            background: rgba(255, 215, 0, 0.1);
+        }
+
+        @keyframes slideIn {
+            from { 
+                opacity: 0;
+                transform: translateX(100px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .player-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #8b4513, #a0522d);
+            border: 2px solid #d4af37;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .roll-info {
+            flex-grow: 1;
+        }
+
+        .player-name {
+            font-weight: 700;
+            color: #ffd700;
+            font-size: 1rem;
+            margin-bottom: 3px;
+        }
+
+        .roll-details {
+            color: #d4af37;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .roll-result {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #ffd700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            flex-shrink: 0;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .roll-result.critical {
+            color: #00ff00;
+            text-shadow: 0 0 15px #00ff00;
+        }
+
+        .roll-result.fumble {
+            color: #ff0000;
+            text-shadow: 0 0 15px #ff0000;
+        }
+
+        .timestamp {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            font-size: 0.7rem;
+            color: #d4af37;
+            opacity: 0.6;
+        }
+
+        .instructions {
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid #ffd700;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            font-size: 0.9rem;
+        }
+
+        .background-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.05;
+            background-image: 
+                radial-gradient(circle at 25% 25%, #ffd700 2px, transparent 2px),
+                radial-gradient(circle at 75% 75%, #ffd700 1px, transparent 1px);
+            background-size: 100px 100px;
+            z-index: -1;
+        }
+
+        .debug-info {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            display: none;
+            max-height: 300px;
+            overflow-y: auto;
+            width: 300px;
+        }
+
+        .group-roll-response {
+            background: rgba(255, 165, 0, 0.2);
+            border-color: #ffa500;
+        }
+
+        .small-button {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+        }
+
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .party-feed {
+                height: 50vh;
+            }
+        }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 2rem; }
+            .setup-form { flex-direction: column; }
+            .avatar-selector { justify-content: center; }
+            .dice-selector { gap: 5px; }
+            .roll-entry { flex-direction: column; text-align: center; }
+            .tabs { flex-direction: column; }
+            .initiative-header { flex-direction: column; }
+            .initiative-controls { justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="background-pattern"></div>
+    
+    <div class="header">
+        <h1>⚔️ D&D Party Dice Roller ⚔️</h1>
+    </div>
+
+    <div class="connection-section">
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('host')">🏰 Host Room</button>
+            <button class="tab" onclick="switchTab('join')">⚔️ Join Room</button>
+        </div>
+
+        <div id="hostTab" class="tab-content active">
+            <h3>Host a New Campaign</h3>
+            <div class="setup-form">
+                <div class="form-group">
+                    <label>Your Name</label>
+                    <input type="text" id="hostName" class="form-input" placeholder="DM Name" value="Dungeon Master">
+                </div>
+                <div class="form-group">
+                    <label>Choose Avatar</label>
+                    <div class="avatar-selector">
+                        <div class="avatar-option selected" data-avatar="🧙‍♂️">🧙‍♂️</div>
+                        <div class="avatar-option" data-avatar="👑">👑</div>
+                        <div class="avatar-option" data-avatar="🐉">🐉</div>
+                        <div class="avatar-option" data-avatar="📜">📜</div>
+                        <div class="avatar-option" data-avatar="⚔️">⚔️</div>
+                        <div class="avatar-option" data-avatar="🛡️">🛡️</div>
+                        <div class="avatar-option" data-avatar="🏹">🏹</div>
+                        <div class="avatar-option" data-avatar="🔮">🔮</div>
+                    </div>
+                </div>
+            </div>
+            <button class="action-button" onclick="createRoom()">🏰 Create Campaign Room</button>
+            
+            <div id="roomInfo" style="display: none;">
+                <div class="instructions">
+                    <strong>🎯 Share this Host ID with your players:</strong><br>
+                    <small>Players need to enter this exact ID to connect</small>
+                </div>
+                <div class="peer-id" id="hostId">Generating...</div>
+                <button class="action-button" onclick="copyHostId()">📋 Copy Host ID</button>
+                <button class="action-button" onclick="shareRoomLink()">🔗 Share Link</button>
+            </div>
+        </div>
+
+        <div id="joinTab" class="tab-content">
+            <h3>Join Campaign</h3>
+            <div class="setup-form">
+                <div class="form-group">
+                    <label>Your Name</label>
+                    <input type="text" id="playerName" class="form-input" placeholder="Character Name" value="">
+                </div>
+                <div class="form-group">
+                    <label>Host ID</label>
+                    <input type="text" id="hostIdInput" class="form-input" placeholder="Enter Host ID">
+                </div>
+                <div class="form-group">
+                    <label>Choose Avatar</label>
+                    <div class="avatar-selector" id="playerAvatars">
+                        <div class="avatar-option selected" data-avatar="⚔️">⚔️</div>
+                        <div class="avatar-option" data-avatar="🏹">🏹</div>
+                        <div class="avatar-option" data-avatar="🛡️">🛡️</div>
+                        <div class="avatar-option" data-avatar="🔥">🔥</div>
+                        <div class="avatar-option" data-avatar="❄️">❄️</div>
+                        <div class="avatar-option" data-avatar="⚡">⚡</div>
+                        <div class="avatar-option" data-avatar="🌟">🌟</div>
+                        <div class="avatar-option" data-avatar="🦄">🦄</div>
+                    </div>
